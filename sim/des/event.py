@@ -1,6 +1,6 @@
 
 
-class event:
+class Event:
     def __init__(self,compo,handler,time):
         self.compo = compo
         self.handler = handler

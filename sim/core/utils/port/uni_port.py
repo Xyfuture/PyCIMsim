@@ -1,7 +1,7 @@
-from des.base_compo import base_compo
-from des.event import event
+from sim.des.base_compo import BaseCompo
+from sim.des.event import Event
 
-class uni_channel:
+class UniChannel:
     def __init__(self,read_port,write_port):
         self._read_port = read_port
         self._write_port = write_port
@@ -24,10 +24,10 @@ class uni_channel:
         self._read_port.callback()
 
 
-class uni_read_port:
-    def __init__(self,compo:base_compo,callback):
+class UniReadPort:
+    def __init__(self, compo:BaseCompo, callback):
         self._compo = compo
-        self._channel:uni_channel = None
+        self._channel:UniChannel = None
         self._callback = callback
 
     def read(self,time):
@@ -35,21 +35,21 @@ class uni_read_port:
 
     def callback(self):
         next_time = self._compo.next_handle_epsilon
-        ent = event(self._compo,self._callback,next_time)
+        ent = Event(self._compo, self._callback, next_time)
         self._compo.add_event(ent)
 
     def set_channel(self,channel):
         self._channel = channel
 
 
-class uni_write_port:
-    def __init__(self,compo:base_compo):
+class UniWritePort:
+    def __init__(self, compo:BaseCompo):
         self._compo = compo
-        self._channel:uni_channel = None
+        self._channel:UniChannel = None
 
     def write(self,payload,time):
         f = lambda :self._channel.update_value(payload,time)
-        ent = event(self._compo,f,time)
+        ent = Event(self._compo, f, time)
         self._compo.add_event(ent)
 
     def set_channel(self,channel):
@@ -58,16 +58,16 @@ class uni_write_port:
 
 
 def connect_uni_port(port_a,port_b):
-    if isinstance(port_a,uni_read_port) and isinstance(port_b,uni_write_port):
+    if isinstance(port_a, UniReadPort) and isinstance(port_b, UniWritePort):
         read_port = port_a
         write_port = port_b
-    elif  isinstance(port_b,uni_read_port) and isinstance(port_a,uni_write_port):
+    elif  isinstance(port_b, UniReadPort) and isinstance(port_a, UniWritePort):
         read_port = port_b
         write_port = port_a
     else:
         raise ("wrong port type")
 
-    tmp = uni_channel(read_port,write_port)
+    tmp = UniChannel(read_port, write_port)
 
     port_a.set_channel(tmp)
     port_a.set_channel(tmp)

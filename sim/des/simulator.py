@@ -1,12 +1,11 @@
 import queue
+from sim.des.stime import *
+from sim.des.event import *
+from sim.des.base_compo import *
 
-from des.event import *
-from des.stime import *
-from des.base_compo import *
 
-
-class event_wrapper:
-    def __init__(self,ent:event):
+class EventWrapper:
+    def __init__(self, ent:Event):
         self._event = ent
 
     def __hash__(self):
@@ -23,10 +22,10 @@ class event_wrapper:
 
 
 
-class simulator:
+class Simulator:
 
     def __init__(self):
-        self._ctime = stime(0, 0)
+        self._ctime = Stime(0, 0)
         self._compos = list()
         self._event_queue = queue.PriorityQueue()
 
@@ -39,7 +38,7 @@ class simulator:
 
 
     def add_event(self,event_):
-        self._tmp_event_set.add(event_wrapper(event_))
+        self._tmp_event_set.add(EventWrapper(event_))
 
     def flush_queue_buffer(self):
         for ent in self._tmp_event_set:
@@ -61,8 +60,8 @@ class simulator:
                 self.flush_queue_buffer()
 
 
-    def add_compo(self,compo:base_compo):
-        if isinstance(compo,base_compo):
+    def add_compo(self, compo:BaseCompo):
+        if isinstance(compo, BaseCompo):
             self._compos.append(compo)
 
     @property

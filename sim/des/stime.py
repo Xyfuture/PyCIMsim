@@ -1,4 +1,4 @@
-class stime:
+class Stime:
     def __init__(self, tick: int, epsilon: int = 0):
         self._tick = tick
         self._epsilon = epsilon
@@ -35,7 +35,7 @@ class stime:
 
     def __add__(self, other):
         if isinstance(other,int):
-            return stime(self._tick + other, self._epsilon)
+            return Stime(self._tick + other, self._epsilon)
         elif isinstance(other,tuple):
-            return stime(self._tick + other[0], self._epsilon + other[1])
+            return Stime(self._tick + other[0], self._epsilon + other[1])
         return None

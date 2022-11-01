@@ -1,7 +1,7 @@
 from abc import ABCMeta,abstractmethod
 # from simulator import *
 
-class base_compo(metaclass=ABCMeta):
+class BaseCompo(metaclass=ABCMeta):
     def __init__(self,sim):
         self._sim = sim
         self._sim.add_compo(self)
