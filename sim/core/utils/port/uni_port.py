@@ -34,9 +34,10 @@ class UniReadPort:
         return self._channel.read_value(time)
 
     def callback(self):
-        next_time = self._compo.next_handle_epsilon
-        ent = Event(self._compo, self._callback, next_time)
-        self._compo.add_event(ent)
+        if callable(self._callback):
+            next_time = self._compo.next_handle_epsilon
+            ent = Event(self._compo, self._callback, next_time)
+            self._compo.add_event(ent)
 
     def set_channel(self,channel):
         self._channel = channel
