@@ -1,24 +1,17 @@
-from abc import ABCMeta,abstractmethod
-# from simulator import *
-
-class BaseCompo(metaclass=ABCMeta):
-    def __init__(self,sim):
-        self._sim = sim
-        self._sim.add_compo(self)
-
-    @property
-    def sim(self):
-        return self._sim
+from sim.des.event import Event
 
 
-    @abstractmethod
-    def initialize(self):
-        pass
+class BaseElement:
+    def __init__(self,compo):
+        self._compo = compo
+        self._sim = self._compo.sim
 
+    def make_event(self,handler,time):
+        event = Event(self._compo,handler,time)
+        self.add_event(event)
 
     def add_event(self,ent):
         self._sim.add_event(ent)
-
 
     @property
     def current_time(self):

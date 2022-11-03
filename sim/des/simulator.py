@@ -70,7 +70,7 @@ class Simulator:
 
     @property
     def next_tick(self):
-        return self._ctime + 1
+        return Stime(self._ctime.tick + 1,0)
 
     @property
     def next_epsilon(self):
