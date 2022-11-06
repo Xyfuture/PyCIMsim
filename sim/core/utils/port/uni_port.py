@@ -20,10 +20,18 @@ class UniChannel:
     # def wirte(self,payload,time):
     #     pass
 
-    def read_value(self, time):
-        if time >= self._time:
-            return self._payload
-        return None
+    def read_value(self, time=None):
+        # if time >= self._time:
+        #     return self._payload
+        # return None
+        # 检测是否是同一个cycle,或者不管时间的限制
+        if time:
+            if time.tick == self._time.tick:
+                return self._payload
+            # 用于一些同步操作
+            return None
+        return self._payload
+
 
     def update_value(self, payload, time):
         self._payload = payload
@@ -39,7 +47,7 @@ class UniReadPort(BasePort):
         self._channel: UniChannel = None
         self._callback = callback
 
-    def read(self, time):
+    def read(self, time=None):
         if self._channel:
             return self._channel.read_value(time)
         return None

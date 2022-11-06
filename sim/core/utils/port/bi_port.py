@@ -58,7 +58,7 @@ class BiPort(BasePort):
         self._channel = channel
         self._is_left = is_left
 
-    def read(self, time):
+    def read(self, time=None):
         if self._channel:
             return self._channel.read_value(self._is_left, time)
         return None
