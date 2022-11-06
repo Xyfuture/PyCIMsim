@@ -35,7 +35,7 @@ class Stime:
 
     def __add__(self, other):
         if isinstance(other,int):
-            return Stime(self._tick + other, self._epsilon)
+            return Stime(self._tick + other, 0) # set new epsilon to zero
         elif isinstance(other,tuple):
             return Stime(self._tick + other[0], self._epsilon + other[1])
         return None

@@ -26,6 +26,11 @@ class RegEnable(BaseRegister):
 
         return self._enable_port, self._payload_port
 
+    def initialize(self,payload):
+        self._payload = payload
+        self._update_time = self.current_time
+
+
     def pulse(self):
         cur_time = self.current_time
         if self._enable_port.read(cur_time):
