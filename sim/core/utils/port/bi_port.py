@@ -22,7 +22,7 @@ class BiChannel():
         self._right_to_left_channel = UniChannel(
             self._left_port.read_port, self._right_port.write_port)
 
-    def read_value(self, is_left: bool, time):
+    def read_value(self, is_left: bool, time=None):
         if is_left:
             return self._right_to_left_channel.read_value(time)
         else:

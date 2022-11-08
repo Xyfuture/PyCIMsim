@@ -61,10 +61,12 @@ class RegEnable(BaseRegister):
             return True
         return False
 
-    def read(self, time):
-        if self._update_time <= time:
-            return self._payload
-
+    def read(self, time=None):
+        if time:
+            if self._update_time.tick == time.tick:
+                return self._payload
+            return None
+        return self._payload
 
 class RegNext(BaseRegister):
     def __init__(self, compo, callback):
@@ -101,6 +103,9 @@ class RegNext(BaseRegister):
         self.make_event(self.pulse, next_time)
         self._next_run_time = next_time
 
-    def read(self, time):
-        if self._update_time <= time:
-            return self._payload
+    def read(self, time=None):
+        if time:
+            if self._update_time.tick == time.tick:
+                return self._payload
+            return None
+        return self._payload

@@ -46,7 +46,7 @@ class InstFetch(BaseCoreCompo):
             port.write(None,self.current_time)
 
     def process(self):
-        payload = self._reg.read(self.current_time)
+        payload = self._reg.read()
         pc,inst = payload['pc'],payload['inst']
 
         self._reg_file_callback = None

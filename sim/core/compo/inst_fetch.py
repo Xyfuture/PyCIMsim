@@ -45,22 +45,22 @@ class InstFetch(BaseCoreCompo):
 
 
     def fetch_inst(self):
-        jump_payload = self.jump_pc.read(self.current_time)
+        jump_payload = self.jump_pc.read()
 
         if jump_payload:
             self.if_id_port.write({'pc':-1,'inst':None},self.next_update_epslion)
         else:
-            pc = self._pc.read(self.current_time)
+            pc = self._pc.read()
             inst = self._inst_buffer[pc]
             self.if_id_port.write({'pc':pc,'inst':inst},self.next_update_epslion)
 
     def update_pc(self):
-        jump_payload = self.jump_pc.read(self.current_time)
+        jump_payload = self.jump_pc.read()
         # 如果这个周期内没发送jump,那么就不更新
         if jump_payload :
             self._pc_in.write(jump_payload['pc'],self.next_update_epslion)
         else:
-            old_pc = self._pc.read(self.current_time)
+            old_pc = self._pc.read()
             self._pc_in.write(old_pc + 1,self.next_update_epslion)
 
 
