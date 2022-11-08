@@ -18,7 +18,7 @@ class RegEnable(BaseRegister):
 
         self._callback = callback
 
-        self._next_run_time = Stime(0,0)
+        self._next_run_time = Stime(0, 0)
 
     def init_ports(self):
         self._enable_port = UniReadPort(self._compo, self.process_enable)
@@ -26,10 +26,9 @@ class RegEnable(BaseRegister):
 
         return self._enable_port, self._payload_port
 
-    def initialize(self,payload):
+    def initialize(self, payload):
         self._payload = payload
         self._update_time = self.current_time
-
 
     def pulse(self):
         cur_time = self.current_time
@@ -41,7 +40,7 @@ class RegEnable(BaseRegister):
 
             if callable(self._callback):
                 # self._callback()
-                self.make_event(self._callback,self.next_handle_epsilon)
+                self.make_event(self._callback, self.next_handle_epsilon)
 
     def process_enable(self):
         if self._enable_port.read(self.current_time):
@@ -52,7 +51,7 @@ class RegEnable(BaseRegister):
             next_time = self.next_tick
             # event = Event(self._compo, self.pulse, next_time)
             # self._compo.add_event(event)
-            self.make_event(self.pulse,next_time)
+            self.make_event(self.pulse, next_time)
 
             self._next_run_time = next_time
 
@@ -62,7 +61,46 @@ class RegEnable(BaseRegister):
             return True
         return False
 
+    def read(self, time):
+        if self._update_time <= time:
+            return self._payload
 
-    def read(self,time):
+
+class RegNext(BaseRegister):
+    def __init__(self, compo, callback):
+        super(RegNext, self).__init__(compo)
+
+        self._callback = callback
+
+        self._next_payload = None  # 下一个更新时应该保存的值
+        self._payload = None
+        self._update_time = None
+
+        # self._payload_port = None
+
+        self._next_run_time = Stime(0, 0)
+
+    def initialize(self, payload):
+        self._payload = payload
+        self._update_time = self.current_time
+
+    def pulse(self):
+        self._payload = self._next_payload
+        self._update_time = self.current_time
+
+        if callable(self._callback):
+            self._callback()
+
+    def write(self, payload):
+        self._next_payload = payload
+
+        next_time = self.next_tick
+        if next_time == self._next_run_time:
+            return
+
+        self.make_event(self.pulse, next_time)
+        self._next_run_time = next_time
+
+    def read(self, time):
         if self._update_time <= time:
             return self._payload

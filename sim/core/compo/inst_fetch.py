@@ -46,29 +46,31 @@ class InstFetch(BaseCoreCompo):
 
     def fetch_inst(self):
         jump_payload = self.jump_pc.read(self.current_time)
-        if jump_payload['valid']:
-            self.if_id_port.write({'pc':-1,'inst':None},self.current_time)
+
+        if jump_payload:
+            self.if_id_port.write({'pc':-1,'inst':None},self.next_update_epslion)
         else:
             pc = self._pc.read(self.current_time)
             inst = self._inst_buffer[pc]
-            self.if_id_port.write({'pc':pc,'inst':inst},self.current_time)
+            self.if_id_port.write({'pc':pc,'inst':inst},self.next_update_epslion)
 
     def update_pc(self):
         jump_payload = self.jump_pc.read(self.current_time)
-        if jump_payload['valid'] :
-            self._pc_in.write(jump_payload['pc'])
+        # 如果这个周期内没发送jump,那么就不更新
+        if jump_payload :
+            self._pc_in.write(jump_payload['pc'],self.next_update_epslion)
         else:
             old_pc = self._pc.read(self.current_time)
-            self._pc_in.write(old_pc + 1)
+            self._pc_in.write(old_pc + 1,self.next_update_epslion)
 
 
     def initialize(self):
         self._pc.initialize(0)
 
-        self.if_stall.write(False,self.current_time)
-        self._pc_in.write(0,self.current_time)
+        self.if_stall.write(False,self.next_update_epslion)
+        self._pc_in.write(0,self.next_update_epslion)
 
-        self.if_id_port.write(None,self.current_time)
+        self.if_id_port.write(None,self.next_update_epslion)
 
 
     def set_inst_buffer(self,inst_buffer):

@@ -18,32 +18,65 @@ class InstFetch(BaseCoreCompo):
 
         self.jump_pc = UniWritePort(self)
 
-        self.id_ex_port = UniWritePort(self)
-
         self.reg_file_read_addr = UniWritePort(self)
         self.reg_file_read_data = UniReadPort(self,self.finish_read_reg_file)
 
+        self._reg_file_callback = None
+
+        # 发送到不同的 端口 实际上一条线,但是方便了模拟
+        self.id_matrix_port = UniWritePort(self)
+        self.id_vector_port = UniWritePort(self)
+        self.id_transfer_port = UniWritePort(self)
+        self.id_scalar_port = UniWritePort(self)
+        self.id_ex_ports = [self.id_matrix_port,self.id_vector_port,
+                            self.id_transfer_port,self.id_scalar_port]
+
+
+        # 接收是否忙的信号线
+        self.matrix_busy = UniReadPort(self,self.process)
+        self.vector_busy = UniReadPort(self,self.process)
+        self.transfer_busy = UniReadPort(self,self.process)
+
+        self.ex_busy = [self.matrix_busy,self.vector_busy,self.transfer_busy]
+
     def initialize(self):
-        self.id_stall.write(False,self.current_time)
-        self.id_ex_port.write(None,self.current_time)
+        self.id_stall.write(False,self.next_update_epslion)
+
+        for port in self.id_ex_ports:
+            port.write(None,self.current_time)
 
     def process(self):
         payload = self._reg.read(self.current_time)
         pc,inst = payload['pc'],payload['inst']
 
-        # jump
+        self._reg_file_callback = None
+
         if inst.op == 'jmp':
             offset = inst.imm
+            self.jump_pc.write({'valid':True,'pc':pc+offset},self.next_update_epslion)
+        elif inst.op == 'add':
+            rs1 = inst.rs1
+            rs2 = inst.rs2
+            # rd = inst.rd
+            self.reg_file_read_addr.write({'rs1':rs1,'rs2':rs2},self.current_time)
 
+        elif inst.op == 'seti':
+            imm = inst.imm
+            rd = inst.rd
+            decode = {'pc':pc,'op':'seti','rd':rd,'rs1_data':imm}
+
+            self.id_scalar_port.write(decode,self.current_time)
+
+    def add_callback(self):
+        payload = self.reg_file_read_data.read(self.current_time)
+        rs1_data,rs2_data = payload['rs1_data'],payload['rs2_data']
+        payload = self._reg.read(self.current_time)
+        pc,inst = payload['pc'],payload['inst']
+        decode = {'pc':pc,'op':'add','rd':inst.rd,'rs1_data':rs1_data,'rs2_data':rs2_data}
+
+        self.id_scalar_port.write(decode,self.current_time)
 
     def finish_read_reg_file(self):
-        pass
+        if callable(self._reg_file_callback):
+            self._reg_file_callback()
 
-
-
-class BroadcastID(BaseCoreCompo):
-    def __init__(self,sim):
-        super(BroadcastID, self).__init__(sim)
-
-    def initialize(self):
-        pass
