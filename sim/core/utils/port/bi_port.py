@@ -34,6 +34,12 @@ class BiChannel():
         else:
             self._right_to_left_channel.update_value(payload, time)
 
+    def update_value_once(self, is_left: bool, payload, time):
+        if is_left:
+            self._left_to_right_channel.update_value_once(payload, time)
+        else:
+            self._right_to_left_channel.update_value_once(payload, time)
+
 
 class BiPort(BasePort):
     def __init__(self, compo: BaseCompo, callback):
@@ -64,6 +70,11 @@ class BiPort(BasePort):
         return None
 
     def write(self, payload, time):
+        if self._channel:
+            f = lambda: self._channel.update_value(self._is_left, payload, time)
+            self.make_event(f, time)
+
+    def write_once(self, payload, time):
         if self._channel:
             f = lambda: self._channel.update_value(self._is_left, payload, time)
             self.make_event(f, time)

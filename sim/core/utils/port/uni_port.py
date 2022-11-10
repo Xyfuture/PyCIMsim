@@ -4,10 +4,11 @@ from sim.core.utils.port.base_port import BasePort
 from sim.des.base_compo import BaseCompo
 from sim.des.event import Event
 from sim.des.base_element import BaseElement
+from sim.des.stime import Stime
 
 
 class UniChannel:
-    def __init__(self, read_port:UniReadPort, write_port:UniWritePort):
+    def __init__(self, read_port: UniReadPort, write_port: UniWritePort):
         self._read_port = read_port
         self._write_port = write_port
 
@@ -15,7 +16,7 @@ class UniChannel:
         self._write_port.set_channel(self)
 
         self._payload = None
-        self._time = None
+        self._time = Stime(0, 0)
 
     # def wirte(self,payload,time):
     #     pass
@@ -32,12 +33,17 @@ class UniChannel:
             return None
         return self._payload
 
-
     def update_value(self, payload, time):
         self._payload = payload
         self._time = time
 
         self._read_port.callback()
+
+    def update_value_once(self, payload, time):
+        # 每个周期仅允许更新一次
+        if self._time.tick != time.tick:
+            self.update_value(payload,time)
+
 
 
 class UniReadPort(BasePort):
@@ -74,6 +80,12 @@ class UniWritePort(BasePort):
             f = lambda: self._channel.update_value(payload, time)
             self.make_event(f, time)
 
+    def write_once(self,payload,time):
+        # 每个周期只写一次,避免形成一个环
+        if self._channel:
+            f = lambda: self._channel.update_value_once(payload,time)
+            self.make_event(f, time)
+
     def set_channel(self, channel):
         self._channel = channel
 
@@ -92,4 +104,3 @@ def connect_uni_port(port_a, port_b):
         raise ("wrong port type")
 
     tmp = UniChannel(read_port, write_port)
-
