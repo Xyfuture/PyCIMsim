@@ -45,10 +45,10 @@ class InstFetch(BaseCoreCompo):
 
 
         current_inst = self.fetch_inst(pc,jump_payload)
-        next_pc = self.update_pc()
+        next_pc = self.update_pc(pc,jump_payload)
 
-        self.if_id_port.write(current_inst,self.next_update_epslion)
-        self._pc_in.write(next_pc,self.next_update_epsilon)
+        self.if_id_port.write(current_inst, self.next_update_epsilon)
+        self._pc_in.write(next_pc, self.next_update_epsilon)
 
 
     def fetch_inst(self,pc,jump_payload):
@@ -68,10 +68,10 @@ class InstFetch(BaseCoreCompo):
     def initialize(self):
         self._pc.initialize(0)
 
-        self.if_stall.write(False,self.next_update_epslion)
-        self._pc_in.write(0,self.next_update_epslion)
+        self.if_stall.write(False, self.next_update_epsilon)
+        self._pc_in.write(0, self.next_update_epsilon)
 
-        self.if_id_port.write(None,self.next_update_epslion)
+        self.if_id_port.write(None, self.next_update_epsilon)
 
 
     def set_inst_buffer(self,inst_buffer):

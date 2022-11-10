@@ -22,7 +22,7 @@ class InstDecode(BaseCoreCompo):
 
 
     def initialize(self):
-        self.id_stall.write(False, self.next_update_epslion)
+        self.id_stall.write(False, self.next_update_epsilon)
 
     def process(self):
         data = self.reg.read(self.current_time)

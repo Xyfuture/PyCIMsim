@@ -26,7 +26,7 @@ class BaseElement:
 
     @property
     def next_update_epslion(self):
-        return self._sim.next_update_epslion
+        return self._sim.next_update_epsilon
 
     @property
     def next_handle_epsilon(self):

@@ -32,8 +32,8 @@ class BaseCompo(metaclass=ABCMeta):
         return self._sim.next_epsilon
 
     @property
-    def next_update_epslion(self):
-        return self._sim.next_update_epslion
+    def next_update_epsilon(self):
+        return self._sim.next_update_epsilon
 
     @property
     def next_handle_epsilon(self):

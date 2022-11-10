@@ -64,7 +64,7 @@ class DummyLocalBuffer(BaseCoreCompo):
     def finish_process(self, payload, node_id):
         print("Memory request Finished: Node:{} Payload:{} {}".format(node_id, payload, self.current_time))
         self._busy = False
-        self._ports[node_id].write(payload, self.next_update_epslion)
+        self._ports[node_id].write(payload, self.next_update_epsilon)
         self.process_request()
 
     def get_process_latency(self):

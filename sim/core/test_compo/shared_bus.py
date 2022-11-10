@@ -70,8 +70,8 @@ class SharedBus(BaseCompo):
         dst = packet.dst
         payload = packet.payload
 
-        self._node_data_ports[dst].write(BusPacket(payload, dst, True, src), self.next_update_epslion)
-        self._node_ack_ports[src].write(True, self.next_update_epslion)
+        self._node_data_ports[dst].write(BusPacket(payload, dst, True, src), self.next_update_epsilon)
+        self._node_ack_ports[src].write(True, self.next_update_epsilon)
 
         self.transfer_payload()  # 看看有没有还有没有等待传输的
 

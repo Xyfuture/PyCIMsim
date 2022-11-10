@@ -78,7 +78,7 @@ class Simulator:
         return self._ctime + (0, 1)
 
     @property
-    def next_update_epslion(self):
+    def next_update_epsilon(self):
         if self._ctime.epsilon % 2 == 0:
             return self._ctime + (0,2)
         return self._ctime + (0,1)

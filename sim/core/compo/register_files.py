@@ -37,7 +37,7 @@ class RegisterFiles(BaseCoreCompo):
                 for k in bypass_value:
                     value[k] = bypass_value[k]
             # 写回去
-            self.reg_file_read_data.write(value,self.next_update_epslion)
+            self.reg_file_read_data.write(value, self.next_update_epsilon)
 
 
     def read_value(self, decode_payload):

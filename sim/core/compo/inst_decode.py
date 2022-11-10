@@ -40,7 +40,7 @@ class InstFetch(BaseCoreCompo):
         self.ex_busy = [self.matrix_busy,self.vector_busy,self.transfer_busy]
 
     def initialize(self):
-        self.id_stall.write(False,self.next_update_epslion)
+        self.id_stall.write(False, self.next_update_epsilon)
 
         for port in self.id_ex_ports:
             port.write(None,self.current_time)
@@ -53,7 +53,7 @@ class InstFetch(BaseCoreCompo):
 
         if inst.op == 'jmp':
             offset = inst.imm
-            self.jump_pc.write({'valid':True,'pc':pc+offset},self.next_update_epslion)
+            self.jump_pc.write({'valid':True,'pc':pc+offset}, self.next_update_epsilon)
         elif inst.op == 'add':
             rs1 = inst.rs1
             rs2 = inst.rs2

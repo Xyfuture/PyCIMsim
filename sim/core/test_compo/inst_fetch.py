@@ -31,12 +31,12 @@ class InstFetch(BaseCoreCompo):
 
 
     def initialize(self):
-        self.if_stall.write(False, self.next_update_epslion)
-        self.if_id_port.write(None,self.next_update_epslion)
+        self.if_stall.write(False, self.next_update_epsilon)
+        self.if_id_port.write(None, self.next_update_epsilon)
 
     def update_pc(self):
         if self._pc < 4:
-            self.if_id_port.write(self._data[self._pc],self.next_update_epslion)
+            self.if_id_port.write(self._data[self._pc], self.next_update_epsilon)
 
             self._pc += 1
         else:
