@@ -38,7 +38,7 @@ class Simulator:
 
 
     def add_event(self,event_):
-        assert self._ctime != event_.time # 不能插入当前时间的事件
+        # assert self._ctime != event_.time # 不能插入当前时间的事件
         self._tmp_event_set.add(EventWrapper(event_))
 
     def flush_queue_buffer(self):

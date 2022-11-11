@@ -31,10 +31,9 @@ class RegEnable(BaseRegister):
         self._update_time = self.current_time
 
     def pulse(self):
-        cur_time = self.current_time
-        if self._enable_port.read(cur_time):
-            self._payload = self._payload_port.read(cur_time)
-            self._update_time = cur_time
+        if self._enable_port.read():
+            self._payload = self._payload_port.read()
+            self._update_time = self.current_time
 
             self.run_next()
 
@@ -43,7 +42,7 @@ class RegEnable(BaseRegister):
                 self.make_event(self._callback, self.next_handle_epsilon)
 
     def process_enable(self):
-        if self._enable_port.read(self.current_time):
+        if self._enable_port.read():
             self.run_next()
 
     def run_next(self):
