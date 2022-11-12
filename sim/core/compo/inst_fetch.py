@@ -33,14 +33,14 @@ class InstFetch(BaseCoreCompo):
             inst_payload = {'pc':pc,'inst':self._inst_buffer[pc]}
             if jump_payload:
                 inst_payload = {'pc':-1,'inst':{'op':'nop'}}
-            self.if_id_port.write(inst_payload, self.next_update_epsilon)
+            self.if_id_port.write(inst_payload)
 
         def update_pc():
             next_pc = pc + 1
             # 如果这个周期内没发送jump,那么就不更新
             if jump_payload :
                 next_pc = pc + jump_payload['offset']
-            self._pc_in.write(next_pc, self.next_update_epsilon)
+            self._pc_in.write(next_pc)
 
         pc = self._pc.read()
         jump_payload = self.jump_pc.read(self.current_time)
@@ -51,10 +51,10 @@ class InstFetch(BaseCoreCompo):
     def initialize(self):
         self._pc.initialize(0)
 
-        self.if_stall.write(False, self.next_update_epsilon)
-        self._pc_in.write(0, self.next_update_epsilon)
+        self.if_stall.write(False)
+        self._pc_in.write(0)
 
-        self.if_id_port.write(None, self.next_update_epsilon)
+        self.if_id_port.write(None)
 
     def set_inst_buffer(self,inst_buffer):
         self._inst_buffer = inst_buffer

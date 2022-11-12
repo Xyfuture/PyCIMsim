@@ -35,7 +35,7 @@ class Scalar(BaseCoreCompo):
         if op == 'add':
             rd_data = rs1_data + rs2_data
 
-        self.reg_file_write.write({'rd_addr':rd_addr,'rd_data':rd_data},self.next_update_epsilon)
+        self.reg_file_write.write({'rd_addr':rd_addr,'rd_data':rd_data})
 
     def initialize(self):
         pass

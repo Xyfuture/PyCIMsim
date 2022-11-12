@@ -24,5 +24,5 @@ class Controller(BaseCoreCompo):
 
     def process(self):
         print(not self.if_stall.read(self.current_time))
-        self.if_enable.write(not self.if_stall.read(self.current_time), self.current_time)
-        self.id_enable.write(not self.id_stall.read(self.current_time), self.current_time)
+        self.if_enable.write(not self.if_stall.read(self.current_time))
+        self.id_enable.write(not self.id_stall.read(self.current_time))

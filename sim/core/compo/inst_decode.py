@@ -80,19 +80,19 @@ class InstDecode(BaseCoreCompo):
         if op == 'add':
             rd_addr = inst['rd_addr']
             decode_payload = {'pc':pc,'inst':inst,'aluop':'add','rd_addr':rd_addr,'rs1_data':rs1_data,'rs2_data':rs2_data}
-            self.id_scalar_port.write(decode_payload,self.next_update_epsilon)
+            self.id_scalar_port.write(decode_payload)
         elif op == 'addi':
             rd_addr = inst['rd_addr']
             imm = inst['imm']
             decode_payload = {'pc': pc, 'inst': inst,'aluop':'add','rd_addr': rd_addr, 'rs1_data': rs1_data, 'rs2_data': imm}
-            self.id_scalar_port.write(decode_payload, self.next_update_epsilon)
+            self.id_scalar_port.write(decode_payload)
         elif op == 'j':
             imm = inst['imm']
-            self.jump_pc.write({'offset':imm},self.next_update_epsilon)
+            self.jump_pc.write({'offset':imm})
 
 
     def initialize(self):
-        self.id_stall.write(False, self.next_update_epsilon)
+        self.id_stall.write(False)
 
         # for port in self.id_ex_ports:
         #     port.write(None, self.current_time)

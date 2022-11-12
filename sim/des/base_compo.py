@@ -1,5 +1,7 @@
 from abc import ABCMeta,abstractmethod
 # from simulator import *
+from sim.des.event import Event
+
 
 class BaseCompo(metaclass=ABCMeta):
     def __init__(self,sim):
@@ -14,6 +16,9 @@ class BaseCompo(metaclass=ABCMeta):
     @abstractmethod
     def initialize(self):
         pass
+
+    def make_event(self,handler,time):
+        self._sim.add_event(Event(self,handler,time))
 
 
     def add_event(self,ent):

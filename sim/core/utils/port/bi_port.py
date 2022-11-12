@@ -69,12 +69,14 @@ class BiPort(BasePort):
             return self._channel.read_value(self._is_left, time)
         return None
 
-    def write(self, payload, time):
+    def write(self, payload):
+        time = self.next_update_epslion
         if self._channel:
             f = lambda: self._channel.update_value(self._is_left, payload, time)
             self.make_event(f, time)
 
-    def write_once(self, payload, time):
+    def write_once(self, payload):
+        time = self.next_update_epslion
         if self._channel:
             f = lambda: self._channel.update_value(self._is_left, payload, time)
             self.make_event(f, time)

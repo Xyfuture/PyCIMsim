@@ -75,13 +75,15 @@ class UniWritePort(BasePort):
 
         self._channel: UniChannel = None
 
-    def write(self, payload, time):
+    def write(self, payload):
+        time = self.next_update_epslion
         if self._channel:
             f = lambda: self._channel.update_value(payload, time)
             self.make_event(f, time)
 
-    def write_once(self,payload,time):
+    def write_once(self,payload):
         # 每个周期只写一次,避免形成一个环
+        time = self.next_update_epslion
         if self._channel:
             f = lambda: self._channel.update_value_once(payload,time)
             self.make_event(f, time)
