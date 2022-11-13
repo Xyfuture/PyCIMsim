@@ -108,3 +108,16 @@ class RegNext(BaseRegister):
                 return self._payload
             return None
         return self._payload
+
+    def set_callback(self,callback):
+        self._callback = callback
+
+# 写入一次,然后失效
+class RegOnce(RegNext):
+    def __init__(self,compo,callback):
+        super(RegOnce, self).__init__(compo,callback)
+
+    def pulse(self):
+        super(RegOnce, self).pulse()
+        self.write(None)
+

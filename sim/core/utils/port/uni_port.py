@@ -106,3 +106,12 @@ def connect_uni_port(port_a, port_b):
         raise ("wrong port type")
 
     tmp = UniChannel(read_port, write_port)
+
+
+def make_bind_ports(compo,callback):
+    read_port = UniReadPort(compo,callback)
+    write_port = UniWritePort(compo)
+
+    read_port // write_port
+
+    return read_port,write_port
