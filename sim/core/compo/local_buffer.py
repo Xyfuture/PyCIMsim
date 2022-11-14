@@ -5,7 +5,7 @@ from sim.des.base_compo import BaseCompo
 from sim.des.stime import Stime
 from sim.core.utils.port.uni_port import UniReadPort, UniWritePort
 from sim.core.utils.register.register import RegEnable, RegNext
-from sim.core.utils.bus.bi_bus import SharedBusPort
+from sim.core.utils.bus.message_bus import MessageInterface
 
 
 class LocalBuffer(BaseCoreCompo):
@@ -14,26 +14,31 @@ class LocalBuffer(BaseCoreCompo):
 
         self._config = config
 
-        self.buffer_port = SharedBusPort(self, "buffer", self.handle_request, self.finish_all)
+        self.buffer_port = MessageInterface(self, "buffer",self.process)
 
     def initialize(self):
         pass
 
-    def calc_latency(self):
+    def calc_latency(self,data_size,access_type):
         return 10
 
-    def handle_request(self):
-        # payload = self.buffer_port.read()
-        # src = payload['src']
+    def process(self,payload):
+        data_size = payload['data_size']
+        access_type =payload['access_type']
 
-        latency = self.calc_latency()
-        self.make_event(self.write_reqeust_finish, self.current_time + latency)
+        latency = self.calc_latency(data_size,access_type)
 
-    def read_request_finish(self):
-        pass
+        self.make_event(lambda : self.finish_request(payload),self.current_time+latency)
 
-    def write_reqeust_finish(self):
-        self.finish_all()
 
-    def finish_all(self):
-        self.buffer_port.allow_read_next(True)
+    def finish_request(self,payload):
+        access_type =payload['access_type']
+
+        if access_type == 'read':
+            src =payload['src']
+            read_payload = {'src':'buffer','dst':src,'data':None,'data_size':128}
+            self.buffer_port.send(read_payload,lambda : self.buffer_port.allow_receive())
+        elif access_type == 'write':
+            self.buffer_port.allow_receive()
+
+

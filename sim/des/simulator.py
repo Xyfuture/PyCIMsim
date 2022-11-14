@@ -1,4 +1,6 @@
 import queue
+from collections import OrderedDict
+
 from sim.des.stime import *
 from sim.des.event import *
 from sim.des.base_compo import *
@@ -29,7 +31,7 @@ class Simulator:
         self._compos = list()
         self._event_queue = queue.PriorityQueue()
 
-        self._tmp_event_set = set()
+        self._tmp_event_set = OrderedDict()
 
     def initialize(self):
         for compo in self._compos:
@@ -39,12 +41,12 @@ class Simulator:
 
     def add_event(self,event_):
         # assert self._ctime != event_.time # 不能插入当前时间的事件
-        self._tmp_event_set.add(EventWrapper(event_))
+        self._tmp_event_set[EventWrapper(event_)] = None
 
     def flush_queue_buffer(self):
-        for ent in self._tmp_event_set:
+        for ent in self._tmp_event_set.keys():
             self._event_queue.put(ent.get_event())
-        self._tmp_event_set = set()
+        self._tmp_event_set = OrderedDict()
 
     def run(self):
 

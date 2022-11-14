@@ -13,7 +13,7 @@ class InstDecode(BaseCoreCompo):
     def __init__(self, sim):
         super(InstDecode, self).__init__(sim)
 
-        self._reg = RegEnable(self, fl(self.read_register,self.decode_dispatch))
+        self._reg = RegEnable(self, fl(self.read_register, self.decode_dispatch, self.check_stall))
         self.id_enable, self.if_id_port = self._reg.init_ports()
         self.id_stall = UniWritePort(self)
 
@@ -31,13 +31,13 @@ class InstDecode(BaseCoreCompo):
                             self.id_transfer_port, self.id_scalar_port]
 
         # 接收是否忙的信号线
-        # self.matrix_busy = UniReadPort(self, self.process)
+        self.matrix_busy = UniReadPort(self, self.check_stall)
         # self.vector_busy = UniReadPort(self, self.process)
         # self.transfer_busy = UniReadPort(self, self.process)
         #
         # self.ex_busy = [self.matrix_busy, self.vector_busy, self.transfer_busy]
 
-        self._stall_reg = RegNext(self,None)
+        # self._stall_reg = RegNext(self,None)
 
     def read_register(self):
         inst_payload = self._reg.read()
@@ -48,12 +48,12 @@ class InstDecode(BaseCoreCompo):
 
         if 'rs1_addr' not in inst and 'rs2_addr' not in inst:
             return
-        reg_read_payload = {'rs1_addr':0,'rs2_addr':0}
-        for reg in ['rs1_addr','rs2_addr']:
+        reg_read_payload = {'rs1_addr': 0, 'rs2_addr': 0}
+        for reg in ['rs1_addr', 'rs2_addr']:
             if reg in inst:
                 reg_read_payload[reg] = inst[reg]
 
-        self.reg_file_read_addr.write(reg_read_payload,self.next_update_epsilon)
+        self.reg_file_read_addr.write(reg_read_payload)
 
     def decode_dispatch(self):
         # def ex_busy_status():
@@ -67,29 +67,47 @@ class InstDecode(BaseCoreCompo):
         if not inst_payload:
             return
 
-        inst,pc = inst_payload['inst'],inst_payload['pc']
+        inst, pc = inst_payload['inst'], inst_payload['pc']
 
         reg_payload = self.reg_file_read_data.read(self.current_time)
-        rs1_data,rs2_data = 0,0
+        rs1_data, rs2_data = 0, 0
         if reg_payload:
-            rs1_data, rs2_data = reg_payload['rs1_data'],reg_payload['rs2_data']
+            rs1_data, rs2_data = reg_payload['rs1_data'], reg_payload['rs2_data']
 
         # busy_payload = ex_busy_status()
 
         op = inst['op']
         if op == 'add':
             rd_addr = inst['rd_addr']
-            decode_payload = {'pc':pc,'inst':inst,'aluop':'add','rd_addr':rd_addr,'rs1_data':rs1_data,'rs2_data':rs2_data}
+            decode_payload = {'pc': pc, 'inst': inst, 'aluop': 'add', 'rd_addr': rd_addr, 'rs1_data': rs1_data,
+                              'rs2_data': rs2_data}
             self.id_scalar_port.write(decode_payload)
         elif op == 'addi':
             rd_addr = inst['rd_addr']
             imm = inst['imm']
-            decode_payload = {'pc': pc, 'inst': inst,'aluop':'add','rd_addr': rd_addr, 'rs1_data': rs1_data, 'rs2_data': imm}
+            decode_payload = {'pc': pc, 'inst': inst, 'aluop': 'add', 'rd_addr': rd_addr, 'rs1_data': rs1_data,
+                              'rs2_data': imm}
             self.id_scalar_port.write(decode_payload)
         elif op == 'j':
             imm = inst['imm']
-            self.jump_pc.write({'offset':imm})
+            self.jump_pc.write({'offset': imm})
+        elif op == 'gemv':
+            decode_payload = {'pc': pc, 'inst': inst, 'op': op}
+            self.id_matrix_port.write(decode_payload)
 
+    def check_stall(self):
+        inst_payload = self._reg.read()
+        if not inst_payload:
+            return
+        matrix_busy_payload = self.matrix_busy.read()
+        if not matrix_busy_payload:
+            return
+        inst = inst_payload['inst']
+        busy = matrix_busy_payload['busy']
+        self.id_stall.write(False)
+        if inst['op'] == 'gemv':
+            if busy:
+                self.id_stall.write(True)
 
     def initialize(self):
         self.id_stall.write(False)

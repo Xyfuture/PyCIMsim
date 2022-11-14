@@ -23,6 +23,20 @@ class Controller(BaseCoreCompo):
 
 
     def process(self):
-        print(not self.if_stall.read(self.current_time))
-        self.if_enable.write(not self.if_stall.read(self.current_time))
-        self.id_enable.write(not self.id_stall.read(self.current_time))
+        # print(not self.if_stall.read(self.current_time))
+
+        # self.if_enable.write(not self.if_stall.read(self.current_time))
+        # self.id_enable.write(not self.id_stall.read(self.current_time))
+
+        if_status = self.if_stall.read(self.current_time)
+        id_status = self.id_stall.read(self.current_time)
+
+        if id_status:
+            self.if_enable.write(False)
+            self.id_enable.write(False)
+        elif if_status:
+            self.if_enable.write(False)
+            self.id_enable.write(True)
+        else :
+            self.if_enable.write(True)
+            self.id_enable.write(True)

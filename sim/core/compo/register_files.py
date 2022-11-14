@@ -47,7 +47,7 @@ class RegisterFiles(BaseCoreCompo):
                 if rs2_addr == rd_addr:
                     value['rs2_data'] = rd_data
 
-            self.reg_file_read_data.write(value, self.next_update_epsilon)
+            self.reg_file_read_data.write(value)
 
     def update_value(self):
         scalar_payload = self.reg_file_write.read(self.current_time)

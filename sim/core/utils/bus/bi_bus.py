@@ -47,7 +47,7 @@ class SharedBus(BaseCoreCompo):
         return 10
 
     def __mod__(self, port):
-        port_id = port.port_id
+        port_id = port.interface_id
 
         self._ports[port_id] = port
         self._pend_buffer[port_id] = queue.Queue()
