@@ -1,10 +1,7 @@
 from sim.core.compo.local_buffer import LocalBuffer
 from sim.core.compo.matrix import MatrixUnit
-from sim.core.test_compo.inst_fetch import InstFetch
-from sim.core.test_compo.inst_decode import InstDecode
-from sim.core.utils.bus.message_bus import MessageBus
+from sim.core.compo.message_bus import MessageBus
 from sim.des.simulator import Simulator
-from sim.core.utils.port.uni_port import connect_uni_port
 
 from sim.core.compo.inst_fetch import InstFetch
 from sim.core.compo.inst_decode import InstDecode

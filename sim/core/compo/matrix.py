@@ -2,12 +2,8 @@ from sim.circuit.module.registry import registry
 from sim.circuit.port.port import UniReadPort, UniWritePort
 from sim.circuit.register.register import RegNext
 from sim.core.compo.base_core_compo import BaseCoreCompo
-from sim.des.simulator import Simulator
-from sim.des.event import Event
-from sim.des.base_compo import BaseCompo
-from sim.des.stime import Stime
 
-from sim.core.utils.bus.message_bus import MessageInterface
+from sim.core.compo.message_bus import MessageInterface
 
 class MatrixUnit(BaseCoreCompo):
     def __init__(self,sim,config=None):

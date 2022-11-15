@@ -1,11 +1,5 @@
 from sim.core.compo.base_core_compo import BaseCoreCompo
-from sim.des.simulator import Simulator
-from sim.des.event import Event
-from sim.des.base_compo import BaseCompo
-from sim.des.stime import Stime
-from sim.core.utils.port.uni_port import UniReadPort, UniWritePort
-from sim.core.utils.register.register import RegEnable, RegNext
-from sim.core.utils.bus.message_bus import MessageInterface
+from sim.core.compo.message_bus import MessageInterface
 
 
 class LocalBuffer(BaseCoreCompo):

@@ -105,8 +105,6 @@ class InstDecode(BaseCoreCompo):
             decode_payload = {'pc': pc, 'inst': inst, 'op': op}
             self.id_matrix_port.write(decode_payload)
 
-
-
     @registry(['_reg_read_port','matrix_busy'])
     def check_stall(self):
         inst_payload = self._reg_read_port.read()
