@@ -1,41 +1,15 @@
 from __future__ import annotations
 
-from sim.circuit.wire.base_wire import BaseWire
+from sim.circuit.port.channel import UniChannel, connect_with_uni_channel
+from sim.circuit.port.base_port import BasePort
 from sim.des.base_compo import BaseCompo
-from sim.des.event import Event
-from sim.des.base_element import BaseElement
-from sim.des.stime import Stime
 from sim.des.utils import fl
 
 
-class UniChannel:
-    def __init__(self, read_wire: UniReadWire, write_wire: UniWriteWire):
-        self._read_wire = read_wire
-        self._write_wire = write_wire
-
-        self._read_wire.set_channel(self)
-        self._write_wire.set_channel(self)
-
-        self._payload = None
-        # self._time = Stime(0, 0)
-
-        self._next_payload = None
-
-    def read_value(self):
-        return self._payload
-
-    def write_value(self,payload):
-        self._next_payload = payload
-        self._write_wire.update_channel()
-
-    def update_value(self):
-        if self._next_payload != self._payload:
-            self._payload = self._next_payload
-            # self._next_payload = None
-            self._read_wire.callback()
 
 
-class UniReadWire(BaseWire):
+
+class UniReadPort(BasePort):
     def __init__(self, compo: BaseCompo):
         super().__init__(compo)
 
@@ -47,21 +21,31 @@ class UniReadWire(BaseWire):
             return self._channel.read_value()
         return None
 
-    def callback(self):
+    def channel_callback(self):
         if callable(self._callback):
             self.make_event(self._callback, self.next_handle_epsilon)
 
     def add_callback(self, *args):
-        self._callback.add_func(args)
+        self._callback.add_func(*args)
 
     def set_channel(self, channel):
         self._channel = channel
 
     def __floordiv__(self, other):
-        connect_uni_write(self, other)
+        connect_with_uni_channel(self, other)
+
+    @property
+    def as_read_port(self):
+        if self._channel:
+            return False
+        return True
+
+    @property
+    def as_write_port(self):
+        return False
 
 
-class UniWriteWire(BaseWire):
+class UniWritePort(BasePort):
     def __init__(self, compo: BaseCompo):
         super().__init__(compo)
 
@@ -71,23 +55,30 @@ class UniWriteWire(BaseWire):
         if self._channel:
             self._channel.write_value(payload)
 
-    def update_channel(self):
-        # 这个设计有点烂
-        self.make_event(self._channel.update_value,self.next_update_epslion)
-
     def set_channel(self, channel):
         self._channel = channel
 
     def __floordiv__(self, other):
-        connect_uni_write(self, other)
+        connect_with_uni_channel(self, other)
+
+    @property
+    def as_read_port(self):
+        return False
+
+    @property
+    def as_write_port(self):
+        if self._channel:
+            return False
+        return True
 
 
-class UniWire(BaseWire):
+# 内部的线还需要设计一下
+class UniWire(BasePort):
     def __init__(self,compo):
         super(UniWire, self).__init__(compo)
 
-        self._read = UniReadWire(compo)
-        self._write = UniWriteWire(compo)
+        self._read = UniReadPort(compo)
+        self._write = UniWritePort(compo)
 
         self._read // self._write
 
@@ -98,7 +89,15 @@ class UniWire(BaseWire):
         return self._read.read()
 
     def add_callback(self,*args):
-        self._read.add_callback(args)
+        self._read.add_callback(*args)
+
+    @property
+    def as_read_port(self):
+        return False
+
+    @property
+    def as_write_port(self):
+        return False
 
 
 
@@ -107,10 +106,10 @@ class UniWire(BaseWire):
 
 
 def connect_uni_write(port_a, port_b):
-    if isinstance(port_a, UniReadWire) and isinstance(port_b, UniWriteWire):
+    if isinstance(port_a, UniReadPort) and isinstance(port_b, UniWritePort):
         read_port = port_a
         write_port = port_b
-    elif isinstance(port_b, UniReadWire) and isinstance(port_a, UniWriteWire):
+    elif isinstance(port_b, UniReadPort) and isinstance(port_a, UniWritePort):
         read_port = port_b
         write_port = port_a
     else:

@@ -1,11 +1,13 @@
+from sim.circuit.module.registry import registry
+from sim.circuit.register.register import RegEnable
+from sim.circuit.port.port import UniWritePort, UniReadPort
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.des.simulator import Simulator
 from sim.des.event import Event
 from sim.des.base_compo import BaseCompo
 from sim.des.stime import Stime
 
-from sim.core.utils.port.uni_port import UniReadPort,UniWritePort
-from sim.core.utils.register.register import RegEnable
+
 
 
 
@@ -13,21 +15,24 @@ class InstFetch(BaseCoreCompo):
     def __init__(self,sim):
         super(InstFetch, self).__init__(sim)
 
-        # self._pc = 0
         self._inst_buffer = []
 
-        self._pc = RegEnable(self,self.process)
+        self._pc_reg = RegEnable(self)
+
+        self.jump_pc = UniReadPort(self)
 
         self.if_id_port = UniWritePort(self)
 
-        self.jump_pc = UniReadPort(self,self.process)
-
-        self.if_enable,self._pc_read = self._pc.init_ports()
         self.if_stall = UniWritePort(self)
 
-        self._pc_in = UniWritePort(self)
-        self._pc_in // self._pc_read
+        self._pc_write_port = self._pc_reg.get_input_write_port()
+        self._pc_read_port = self._pc_reg.get_output_read_port()
 
+        self.if_enable = self._pc_reg.get_enable_read_port()
+
+        self.registry_sensitive()
+
+    @registry(['_pc_read_port','jump_pc'])
     def process(self):
         def fetch_inst():
             inst_payload = {'pc':pc,'inst':self._inst_buffer[pc]}
@@ -40,19 +45,19 @@ class InstFetch(BaseCoreCompo):
             # 如果这个周期内没发送jump,那么就不更新
             if jump_payload :
                 next_pc = pc + jump_payload['offset']
-            self._pc_in.write(next_pc)
+            self._pc_write_port.write(next_pc)
 
-        pc = self._pc.read()
-        jump_payload = self.jump_pc.read(self.current_time)
+        pc = self._pc_read_port.read()
+        jump_payload = self.jump_pc.read()
 
         fetch_inst()
         update_pc()
 
     def initialize(self):
-        self._pc.initialize(0)
+        self._pc_reg.initialize(10)
 
         self.if_stall.write(False)
-        self._pc_in.write(0)
+        self._pc_write_port.write(0)
 
         self.if_id_port.write(None)
 

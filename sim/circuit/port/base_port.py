@@ -1,9 +1,9 @@
 from sim.des.base_element import BaseElement
 
 
-class BaseWire(BaseElement):
+class BasePort(BaseElement):
     def __init__(self, compo):
-        super(BaseWire, self).__init__(compo)
+        super(BasePort, self).__init__(compo)
 
 
 

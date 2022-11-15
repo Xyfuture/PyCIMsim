@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from sim.circuit.register.base_register import BaseRegister
-from sim.circuit.wire.base_wire import BaseWire
-from sim.circuit.wire.wire import UniReadWire, UniWriteWire, UniWire
+from sim.circuit.port.base_port import BasePort
+from sim.circuit.port.port import UniReadPort, UniWritePort, UniWire
 from sim.des.base_compo import BaseCompo
 from sim.des.event import Event
 from sim.des.base_element import BaseElement
@@ -23,17 +23,18 @@ class BaseModule(BaseCompo):
 
     def registry_sensitive(self):
         for method_name in dir(self):
-            method = self.__getattribute__(method_name)
-            if callable(method) and hasattr(method_name, '_sensitive_list'):
+            method = getattr(self,method_name)
+            if callable(method) and hasattr(method, '_sensitive_list'):
                 sen_list = method._sensitive_list
-                for wire_name in sen_list:
-                    wire = self.__getattribute__(wire_name)
-                    wire.add_callback(method)
+                # method = self.__dict__[method_name].__get__(None, self)
+                for port_name in sen_list:
+                    port = getattr(self,port_name)
+                    port.add_callback(method)
 
     def __setattr__(self, key, value):
-        if isinstance(value, UniReadWire):
+        if isinstance(value, UniReadPort):
             self._input_wires_dict[key] = value
-        elif isinstance(value, UniWriteWire):
+        elif isinstance(value, UniWritePort):
             self._output_wires_dict[key] = value
         elif isinstance(value, UniWire):
             self._inner_wires_dict[key] = value

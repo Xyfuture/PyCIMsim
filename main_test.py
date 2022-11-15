@@ -48,7 +48,7 @@ if __name__ == "__main__":
     inst_fetch // ctrl
 
     inst_decode // matrix
-
+    #
     bus % matrix.matrix_buffer
     bus % buffer.buffer_port
 
