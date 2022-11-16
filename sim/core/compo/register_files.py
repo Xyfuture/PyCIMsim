@@ -65,4 +65,4 @@ class RegisterFiles(BaseCoreCompo):
             current_reg_files[rd_addr] = rd_data
             self._reg_files_write_port.write(current_reg_files)
 
-            print("register #{} value:{}".format(3,current_reg_files[3]))
+            # print("register #{} value:{}".format(3,current_reg_files[3]))

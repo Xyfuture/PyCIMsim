@@ -102,7 +102,7 @@ class InstDecode(BaseCoreCompo):
             imm = inst['imm']
             self.jump_pc.write({'offset': imm})
         elif op == 'gemv':
-            decode_payload = {'pc': pc, 'inst': inst, 'op': op}
+            decode_payload = {'pc': pc, 'inst': inst, 'op': op,'time':self.current_time}
             self.id_matrix_port.write(decode_payload)
 
     @registry(['_reg_read_port','matrix_busy'])

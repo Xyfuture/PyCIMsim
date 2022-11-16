@@ -14,6 +14,7 @@ class MatrixUnit(BaseCoreCompo):
         self._reg_read_port = self._reg.get_output_read_port()
         self._reg_write_port = self._reg.get_input_write_port()
 
+
         self.id_matrix_port = UniReadPort(self)
 
         self.matrix_buffer = MessageInterface(self,"matrix",self.execute_gemv)
@@ -38,10 +39,15 @@ class MatrixUnit(BaseCoreCompo):
 
     @registry(['_reg_read_port'])
     def process(self):
+        decode_payload = self._reg_read_port.read()
+
+        if not decode_payload:
+            return
+
         self.matrix_busy.write({'busy':True})
 
+        self._reg_write_port.write(None)
         memory_read_request = {'src':'matrix','dst':'buffer','data_size':128,'access_type':'read'}
-
         self.matrix_buffer.send(memory_read_request,None)
 
     def execute_gemv(self,payload):
@@ -53,8 +59,12 @@ class MatrixUnit(BaseCoreCompo):
 
     def finish_execute(self):
         print("finish gemv time:{}".format(self.current_time))
-        self.matrix_busy.write({'busy':False})
+
         self.matrix_buffer.allow_receive()
+        self.matrix_busy.write({'busy': False})
+
+
+        # self.make_event(lambda : self.matrix_busy.write({'busy':False}),self.current_time+(1,1))
 
 
 

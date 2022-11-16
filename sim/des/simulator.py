@@ -1,5 +1,6 @@
 import queue
 from collections import OrderedDict
+import time
 
 from sim.des.stime import *
 from sim.des.event import *
@@ -33,6 +34,7 @@ class Simulator:
 
         self._tmp_event_set = OrderedDict()
 
+
     def initialize(self):
         for compo in self._compos:
             compo.initialize()
@@ -49,7 +51,6 @@ class Simulator:
         self._tmp_event_set = OrderedDict()
 
     def run(self):
-
         while not self._event_queue.empty():
             tmp_event = self._event_queue.get()
             self._ctime = tmp_event.time
