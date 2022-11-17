@@ -55,7 +55,6 @@ class MessageBus(BaseCoreCompo):
         interface.set_bus(self)
 
 
-
 class MessageInterface(BaseElement):
     def __init__(self, compo, interface_id, receive_callback):
         super().__init__(compo)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.circuit.port.channel import UniChannel, connect_with_uni_channel
+from sim.circuit.port.channel import UniChannel, connect_with_uni_channel, connect_with_uni_pulse_channel
 from sim.circuit.port.base_port import BasePort
 from sim.des.base_compo import BaseCompo
 from sim.des.utils import fl
@@ -100,22 +100,61 @@ class UniWire(BasePort):
         return False
 
 
+class UniPulseReadPort(UniReadPort):
+    def __init__(self,compo):
+        super(UniPulseReadPort, self).__init__(compo)
+
+    def __floordiv__(self, other):
+        connect_with_uni_pulse_channel(self,other)
+
+
+class UniPulseWritePort(UniWritePort):
+    def __init__(self,compo):
+        super(UniPulseWritePort, self).__init__(compo)
+
+    def __floordiv__(self, other):
+        connect_with_uni_pulse_channel(self,other)
+
+
+class UniPulseWire(BasePort):
+    def __init__(self,compo):
+        super(UniPulseWire, self).__init__(compo)
+
+        self._read = UniPulseReadPort(compo)
+        self._write = UniPulseWritePort(compo)
+
+        self._read // self._write
+
+    def write(self,payload):
+        self._write.write(payload)
+
+    def read(self):
+        return self._read.read()
+
+    def add_callback(self,*args):
+        self._read.add_callback(*args)
+
+    @property
+    def as_read_port(self):
+        return False
+
+    @property
+    def as_write_port(self):
+        return False
 
 
 
-
-
-def connect_uni_write(port_a, port_b):
-    if isinstance(port_a, UniReadPort) and isinstance(port_b, UniWritePort):
-        read_port = port_a
-        write_port = port_b
-    elif isinstance(port_b, UniReadPort) and isinstance(port_a, UniWritePort):
-        read_port = port_b
-        write_port = port_a
-    else:
-        raise ("wrong port type")
-
-    tmp = UniChannel(read_port, write_port)
+# def connect_uni_write(port_a, port_b):
+#     if isinstance(port_a, UniReadPort) and isinstance(port_b, UniWritePort):
+#         read_port = port_a
+#         write_port = port_b
+#     elif isinstance(port_b, UniReadPort) and isinstance(port_a, UniWritePort):
+#         read_port = port_b
+#         write_port = port_a
+#     else:
+#         raise ("wrong port type")
+#
+#     tmp = UniChannel(read_port, write_port)
 
 
 # def make_bind_ports(compo,callback):

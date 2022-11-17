@@ -19,7 +19,7 @@ class Scalar(BaseCoreCompo):
         self._reg_read_port = self._reg.get_output_read_port()
         self._reg_write_port = self._reg.get_input_write_port()
 
-        self.registry_sensitive()
+        # self.registry_sensitive()
 
     @registry(['id_scalar_port'])
     def update_reg(self):

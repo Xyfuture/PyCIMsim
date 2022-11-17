@@ -30,7 +30,7 @@ class InstFetch(BaseCoreCompo):
 
         self.if_enable = self._pc_reg.get_enable_read_port()
 
-        self.registry_sensitive()
+        # self.registry_sensitive()
 
     # @registry(['_pc_read_port','jump_pc'])
     # def process(self):

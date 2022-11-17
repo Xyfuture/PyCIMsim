@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sim.circuit.port.channel import UniChannel
 from sim.circuit.register.base_register import BaseRegister
-from sim.circuit.port.port import UniReadPort, UniWritePort
+from sim.circuit.port.port import UniReadPort, UniWritePort, UniPulseReadPort, UniPulseWritePort
 from sim.des.base_compo import BaseCompo
 from sim.des.stime import Stime
 from sim.des.utils import fl
@@ -29,7 +29,6 @@ class RegNext(BaseRegister):
         self._update_time = self.current_time
 
         self._output_write_port.write(self._payload)
-
 
     def pulse(self):
         if self._input_read_port.read() != self._payload:
@@ -153,4 +152,54 @@ class RegEnable(BaseRegister):
         self._enable_write_port // self._enable_read_port
 
         return self._enable_write_port
+
+
+class Trigger(BaseRegister):
+    def __init__(self,compo):
+        super(Trigger, self).__init__(compo)
+        self._next_status = False
+
+        self._payload = None
+        self._update_time = None
+
+        self._next_run_time = Stime(0,0)
+
+        self._input_read_port = UniPulseReadPort(compo)
+        self._input_read_port.add_callback(self.process_input)
+
+        self._input_write_port = None
+
+        self._callbacks = fl()
+
+    def pulse(self):
+        if self._payload:
+            self.make_event(self._callbacks,self.next_handle_epsilon)
+
+    def process_input(self):
+        self._payload = self._input_read_port.read()
+        self.next_tick()
+
+    def run_next(self):
+        if not self.is_run_next():
+            next_time = self.next_tick
+            self.make_event(self.pulse, next_time)
+
+            self._next_run_time = next_time
+
+    def is_run_next(self) -> bool:
+        next_time = self.next_tick
+        if self._next_run_time == next_time:
+            return True
+        return False
+
+    def add_callback(self,func):
+        self._callbacks.add_func(func)
+
+    def get_input_read_port(self):
+        return self._input_read_port
+
+    def get_input_write_port(self):
+        self._input_write_port = UniPulseWritePort(self._compo)
+        self._input_write_port // self._input_read_port
+        return self._input_write_port
 

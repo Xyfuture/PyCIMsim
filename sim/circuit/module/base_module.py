@@ -21,6 +21,8 @@ class BaseModule(BaseCompo):
         self._modules_dict = {}
         self._registers_dict = {}
 
+        # self.registry_sensitive()
+
     def registry_sensitive(self):
         for method_name in dir(self):
             method = getattr(self,method_name)

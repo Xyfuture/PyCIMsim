@@ -23,7 +23,7 @@ class MatrixUnit(BaseCoreCompo):
 
         # self.request_type_read,self.request_type_write = make_bind_ports(self,self.process)
 
-        self.registry_sensitive()
+        # self.registry_sensitive()
 
     def initialize(self):
         pass

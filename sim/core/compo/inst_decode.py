@@ -45,7 +45,7 @@ class InstDecode(BaseCoreCompo):
 
         # self._stall_reg = RegNext(self,None)
 
-        self.registry_sensitive()
+        # self.registry_sensitive()
 
     @registry(['_reg_read_port'])
     def read_register(self):
