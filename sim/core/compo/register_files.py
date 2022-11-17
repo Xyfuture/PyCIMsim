@@ -27,7 +27,7 @@ class RegisterFiles(BaseCoreCompo):
         self._reg_files_read_port = self._reg_files.get_output_read_port()
         self._reg_files_write_port = self._reg_files.get_input_write_port()
 
-        # self.registry_sensitive()
+        self.registry_sensitive()
 
     def initialize(self):
         tmp = [0 for _ in range(32)]
