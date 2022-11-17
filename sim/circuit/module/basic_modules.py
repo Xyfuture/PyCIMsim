@@ -33,6 +33,10 @@ class RegSustain(BaseModule):
         self.output_write_port = UniWritePort(self)
         self.output_read_port = None
 
+        self.registry_sensitive()
+
+    def initialize(self):
+        pass
 
     @registry(['data_input_read_port','status_input_read_port'])
     def handle_input(self):
@@ -44,7 +48,7 @@ class RegSustain(BaseModule):
 
     @registry(['_data_output_read_port','_status_output_read_port'])
     def gen_output(self):
-        payload = {'status':self._status_output_read_port.read(),'payload':self._data_output_read_port}
+        payload = {'status':self._status_output_read_port.read(),'data_payload':self._data_output_read_port.read()}
         self.output_write_port.write(payload)
 
     def get_status_input_read_port(self):

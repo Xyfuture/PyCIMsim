@@ -1,3 +1,4 @@
+from sim.circuit.module.registry import registry
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.message_bus import MessageInterface
 
@@ -8,7 +9,9 @@ class LocalBuffer(BaseCoreCompo):
 
         self._config = config
 
-        self.buffer_port = MessageInterface(self, "buffer",self.process)
+        self.buffer_port = MessageInterface(self, "buffer")
+
+        self.registry_sensitive()
 
     def initialize(self):
         pass
@@ -16,6 +19,7 @@ class LocalBuffer(BaseCoreCompo):
     def calc_latency(self,data_size,access_type):
         return 10
 
+    @registry(['buffer_port'])
     def process(self,payload):
         data_size = payload['data_size']
         access_type =payload['access_type']

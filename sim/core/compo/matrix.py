@@ -5,6 +5,7 @@ from sim.core.compo.base_core_compo import BaseCoreCompo
 
 from sim.core.compo.message_bus import MessageInterface
 
+
 class MatrixUnit(BaseCoreCompo):
     def __init__(self,sim,config=None):
         super(MatrixUnit, self).__init__(sim)
@@ -13,7 +14,6 @@ class MatrixUnit(BaseCoreCompo):
         self._reg = RegNext(self)
         self._reg_read_port = self._reg.get_output_read_port()
         self._reg_write_port = self._reg.get_input_write_port()
-
 
         self.id_matrix_port = UniReadPort(self)
 

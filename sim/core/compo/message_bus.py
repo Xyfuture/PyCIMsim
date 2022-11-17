@@ -7,6 +7,7 @@ from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.utils.register.register import RegNext, RegOnce
 from sim.des.base_element import BaseElement
 from sim.des.stime import Stime
+from sim.des.utils import fl
 
 
 class MessageBus(BaseCoreCompo):
@@ -56,7 +57,7 @@ class MessageBus(BaseCoreCompo):
 
 
 class MessageInterface(BaseElement):
-    def __init__(self, compo, interface_id, receive_callback):
+    def __init__(self, compo, interface_id,callback=None):
         super().__init__(compo)
 
         self._interface_id = interface_id
@@ -64,7 +65,11 @@ class MessageInterface(BaseElement):
         self._bus: MessageBus = None
         self._receive_ready = True
 
-        self._receive_callback = receive_callback
+        self._receive_callback = fl()
+        if callback:
+            for f in callback:
+                self.add_callback(f)
+
         self._finish_send_callback = None
 
     def receive(self, payload):
@@ -111,3 +116,7 @@ class MessageInterface(BaseElement):
         if isinstance(other,MessageBus):
             other.__mod__(self)
         raise "Error Operator"
+
+    def add_callback(self,func):
+        self._receive_callback.add_func(func)
+

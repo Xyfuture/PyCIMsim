@@ -1,5 +1,5 @@
 from sim.core.compo.local_buffer import LocalBuffer
-from sim.core.compo.matrix import MatrixUnit
+from sim.core.compo.matrix2 import MatrixUnit
 from sim.core.compo.message_bus import MessageBus
 from sim.des.simulator import Simulator
 

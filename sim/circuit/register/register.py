@@ -177,7 +177,7 @@ class Trigger(BaseRegister):
 
     def process_input(self):
         self._payload = self._input_read_port.read()
-        self.next_tick()
+        self.run_next()
 
     def run_next(self):
         if not self.is_run_next():
