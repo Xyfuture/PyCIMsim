@@ -16,15 +16,17 @@ class LocalBuffer(BaseCoreCompo):
     def initialize(self):
         pass
 
-    def calc_latency(self,data_size,access_type):
+    def calc_latency(self,payload):
+        data_size = payload['data_size']
+        access_type =payload['access_type']
         return 10
 
     @registry(['buffer_port'])
-    def process(self,payload):
-        data_size = payload['data_size']
-        access_type =payload['access_type']
+    def handle_request(self,payload):
+        # data_size = payload['data_size']
+        # access_type =payload['access_type']
 
-        latency = self.calc_latency(data_size,access_type)
+        latency = self.calc_latency(payload)
 
         self.make_event(lambda : self.finish_request(payload),self.current_time+latency)
 

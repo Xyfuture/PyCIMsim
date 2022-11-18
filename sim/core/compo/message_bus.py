@@ -32,8 +32,8 @@ class MessageBus(BaseCoreCompo):
             if not self._pend_buffer[interface_id].empty():
                 payload = self._pend_buffer[interface_id].get()
 
-                size = payload['data_size']
-                latency = self.calc_transfer_latency(size)
+                # size = payload['data_size']
+                latency = self.calc_transfer_latency(payload)
 
                 self._interfaces[interface_id].forbid_receive()
                 self.make_event(lambda : self.transfer(payload), self.current_time + latency)
@@ -44,7 +44,7 @@ class MessageBus(BaseCoreCompo):
         self._interfaces[dst].receive(payload)
         self._interfaces[src].finish_send()
 
-    def calc_transfer_latency(self, data_size):
+    def calc_transfer_latency(self, payload):
         return 10
 
     def __mod__(self, interface):
@@ -67,8 +67,11 @@ class MessageInterface(BaseElement):
 
         self._receive_callback = fl()
         if callback:
-            for f in callback:
-                self.add_callback(f)
+            if isinstance(callback,list):
+                for f in callback:
+                    self.add_callback(f)
+            else:
+                self.add_callback(callback)
 
         self._finish_send_callback = None
 
