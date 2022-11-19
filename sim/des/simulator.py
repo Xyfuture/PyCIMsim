@@ -66,7 +66,7 @@ class Simulator:
             self._event_cnt += 1
             if self._event_cnt % 100000 == 0 :
                 print("real time:{}".format(time.time()-st))
-                print("cycles:{}",self.current_time.tick)
+                print("cycles:{}".format(self.current_time.tick))
                 st = time.time()
 
     def add_compo(self, compo:BaseCompo):

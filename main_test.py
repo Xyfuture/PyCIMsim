@@ -39,7 +39,7 @@ if __name__ == "__main__":
     inst_fetch // inst_decode
 
     inst_decode // forward
-
+    inst_decode // matrix
     inst_decode // reg_file
     scalar // reg_file
 
