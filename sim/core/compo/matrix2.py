@@ -33,7 +33,7 @@ class MatrixUnit(BaseCoreCompo):
         self._status_input_write_port.write(True)
 
     def calc_compute_latency(self):
-        return 10
+        return 1000
 
     @registry(['_reg_head_output_read_port','finish_wire'])
     def check_stall_status(self):

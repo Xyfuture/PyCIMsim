@@ -80,7 +80,7 @@ class UniPulseChannel(UniChannel):
 
     def run_next(self):
         if not self.is_run_next():
-            self._sim.add_event(Event(None,self.update_value,self._sim.next_tick))
+            self._sim.add_event(Event(None,self.set_to_default,self._sim.next_tick))
             self._next_run_time = self._sim.next_tick
 
     def is_run_next(self) -> bool:

@@ -33,13 +33,12 @@ class Simulator:
         self._event_queue = queue.PriorityQueue()
 
         self._tmp_event_set = OrderedDict()
-
+        self._event_cnt = 0
 
     def initialize(self):
         for compo in self._compos:
             compo.initialize()
         self.flush_queue_buffer()
-
 
     def add_event(self,event_):
         # assert self._ctime != event_.time # 不能插入当前时间的事件
@@ -51,6 +50,7 @@ class Simulator:
         self._tmp_event_set = OrderedDict()
 
     def run(self):
+        # st = time.time()
         while not self._event_queue.empty():
             tmp_event = self._event_queue.get()
             self._ctime = tmp_event.time
@@ -63,6 +63,11 @@ class Simulator:
             else:
                 self.flush_queue_buffer()
 
+            self._event_cnt += 1
+            # if self._event_cnt % 100000 == 0 :
+            #     print("real time:{}".format(time.time()-st))
+            #     print("cycles:{}",self.current_time.tick)
+            #     st = time.time()
 
     def add_compo(self, compo:BaseCompo):
         if isinstance(compo, BaseCompo):
