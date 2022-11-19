@@ -4,7 +4,6 @@ import queue
 from typing import Dict
 
 from sim.core.compo.base_core_compo import BaseCoreCompo
-from sim.core.utils.register.register import RegNext, RegOnce
 from sim.des.base_element import BaseElement
 from sim.des.stime import Stime
 from sim.des.utils import fl
