@@ -1,5 +1,6 @@
 from sim.circuit.module.registry import registry
-from sim.circuit.port.port import UniWritePort, UniReadPort
+# from sim.circuit.port.port import UniWritePort, UniReadPort
+from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegEnable
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.des.simulator import Simulator
@@ -16,28 +17,21 @@ class InstDecode(BaseCoreCompo):
         super(InstDecode, self).__init__(sim)
 
         self._reg = RegEnable(self)
-        # self.id_enable, self.if_id_port = self._reg.get_wires()
-        self._reg_read_port = self._reg.get_output_read_port()
-        self.if_id_port = self._reg.get_input_read_port()
-        self.id_enable = self._reg.get_enable_read_port()
 
-        self.id_stall = UniWritePort(self)
+        self.id_enable = InWire(UniWire,self)
+        self.if_id_port = InWire(UniWire,self)
 
-        self.jump_pc = UniWritePort(self)
+        self.id_stall = OutWire(UniWire,self)
 
-        self.reg_file_read_addr = UniWritePort(self)
-        self.reg_file_read_data = UniReadPort(self)
+        self.jump_pc = OutWire(UniWire,self)
 
-        # 发送到不同的 端口 实际上一条线,但是方便了模拟
-        self.id_matrix_port = UniWritePort(self)
-        self.id_vector_port = UniWritePort(self)
-        self.id_transfer_port = UniWritePort(self)
-        self.id_scalar_port = UniWritePort(self)
-        self.id_ex_ports = [self.id_matrix_port, self.id_vector_port,
-                            self.id_transfer_port, self.id_scalar_port]
+        self.reg_file_read_addr = OutWire(UniWire,self)
+        self.reg_file_read_data = InWire(UniWire,self)
+
+        self.id_out = OutWire(UniWire,self)
 
         # 接收是否忙的信号线
-        self.matrix_busy = UniReadPort(self)
+        self.matrix_busy = InWire(UniWire,self)
         # self.vector_busy = UniReadPort(self, self.process)
         # self.transfer_busy = UniReadPort(self, self.process)
         #
@@ -45,11 +39,14 @@ class InstDecode(BaseCoreCompo):
 
         # self._stall_reg = RegNext(self,None)
 
+        self._reg_output = UniWire(self)
+        self._reg.connect(self.if_id_port,self.id_enable,self._reg_output)
+
         self.registry_sensitive()
 
-    @registry(['_reg_read_port'])
+    @registry(['_reg_output'])
     def read_register(self):
-        inst_payload = self._reg_read_port.read()
+        inst_payload = self._reg_output.read()
 
         reg_read_payload = {'rs1_addr': 0, 'rs2_addr': 0}
 
@@ -68,10 +65,10 @@ class InstDecode(BaseCoreCompo):
 
         self.reg_file_read_addr.write(reg_read_payload)
 
-    @registry(['_reg_read_port','reg_file_read_data'])
+    @registry(['_reg_output','reg_file_read_data'])
     def decode_dispatch(self):
 
-        inst_payload = self._reg_read_port.read()
+        inst_payload = self._reg_output.read()
 
         if not inst_payload:
             return
@@ -89,25 +86,25 @@ class InstDecode(BaseCoreCompo):
         self.jump_pc.write(None)
         if op == 'add':
             rd_addr = inst['rd_addr']
-            decode_payload = {'pc': pc, 'inst': inst, 'aluop': 'add', 'rd_addr': rd_addr, 'rs1_data': rs1_data,
+            decode_payload = {'pc': pc, 'inst': inst,'ex':'scalar', 'aluop': 'add', 'rd_addr': rd_addr, 'rs1_data': rs1_data,
                               'rs2_data': rs2_data}
-            self.id_scalar_port.write(decode_payload)
+            self.id_out.write(decode_payload)
         elif op == 'addi':
             rd_addr = inst['rd_addr']
             imm = inst['imm']
-            decode_payload = {'pc': pc, 'inst': inst, 'aluop': 'add', 'rd_addr': rd_addr, 'rs1_data': rs1_data,
+            decode_payload = {'pc': pc, 'inst': inst,'ex':'scalar', 'aluop': 'add', 'rd_addr': rd_addr, 'rs1_data': rs1_data,
                               'rs2_data': imm}
-            self.id_scalar_port.write(decode_payload)
+            self.id_out.write(decode_payload)
         elif op == 'j':
             imm = inst['imm']
             self.jump_pc.write({'offset': imm})
         elif op == 'gemv':
-            decode_payload = {'pc': pc, 'inst': inst, 'op': op,'time':self.current_time}
-            self.id_matrix_port.write(decode_payload)
+            decode_payload = {'pc': pc, 'inst': inst, 'ex':'matrix','op': op,'time':self.current_time}
+            self.id_out.write(decode_payload)
 
-    @registry(['_reg_read_port','matrix_busy'])
+    @registry(['_reg_output','matrix_busy'])
     def check_stall(self):
-        inst_payload = self._reg_read_port.read()
+        inst_payload = self._reg_output.read()
         if not inst_payload:
             return
 
@@ -127,3 +124,29 @@ class InstDecode(BaseCoreCompo):
 
         # for port in self.id_ex_ports:
         #     port.write(None, self.current_time)
+
+
+class DecodeForward(BaseCoreCompo):
+    def __init__(self,sim):
+        super(DecodeForward, self).__init__(sim)
+
+        self.id_out = InWire(UniWire,self)
+
+        self.id_matrix_port = OutWire(UniWire,self)
+        self.id_vector_port = OutWire(UniWire,self)
+        self.id_transfer_port = OutWire(UniWire,self)
+        self.id_scalar_port = OutWire(UniWire,self)
+
+        self.registry_sensitive()
+
+    def initialize(self):
+        pass
+
+    @registry(['id_out'])
+    def process(self):
+        payload = self.id_out.read()
+
+        self.id_matrix_port.write(payload)
+        self.id_vector_port.write(payload)
+        self.id_transfer_port.write(payload)
+        self.id_scalar_port.write(payload)

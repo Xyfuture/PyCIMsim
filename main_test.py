@@ -4,7 +4,7 @@ from sim.core.compo.message_bus import MessageBus
 from sim.des.simulator import Simulator
 
 from sim.core.compo.inst_fetch import InstFetch
-from sim.core.compo.inst_decode import InstDecode
+from sim.core.compo.inst_decode import InstDecode, DecodeForward
 from sim.core.compo.register_files import RegisterFiles
 from sim.core.compo.scalar import Scalar
 from sim.core.compo.controller import Controller
@@ -23,9 +23,11 @@ if __name__ == "__main__":
     sim = Simulator()
     inst_fetch = InstFetch(sim)
     inst_decode = InstDecode(sim)
+    forward = DecodeForward(sim)
     ctrl = Controller(sim)
     scalar = Scalar(sim)
     reg_file = RegisterFiles(sim)
+
 
     matrix = MatrixUnit(sim)
     bus = MessageBus(sim)
@@ -36,7 +38,7 @@ if __name__ == "__main__":
 
     inst_fetch // inst_decode
 
-    inst_decode // scalar
+    inst_decode // forward
 
     inst_decode // reg_file
     scalar // reg_file
@@ -44,7 +46,8 @@ if __name__ == "__main__":
     inst_decode // ctrl
     inst_fetch // ctrl
 
-    inst_decode // matrix
+    forward // matrix
+    forward // scalar
     #
     bus % matrix.matrix_buffer
     bus % buffer.buffer_port

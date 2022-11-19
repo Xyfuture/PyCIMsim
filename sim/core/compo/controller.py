@@ -1,5 +1,6 @@
 from sim.circuit.module.registry import registry
-from sim.circuit.port.port import UniReadPort, UniWritePort
+# from sim.circuit.port.port import UniReadPort, UniWritePort
+from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.des.simulator import Simulator
 from sim.des.event import Event
@@ -13,11 +14,11 @@ class Controller(BaseCoreCompo):
     def __init__(self,sim):
         super().__init__(sim)
 
-        self.if_stall = UniReadPort(self)
-        self.id_stall = UniReadPort(self)
+        self.if_stall = InWire(UniWire,self)
+        self.id_stall = InWire(UniWire,self)
 
-        self.if_enable = UniWritePort(self)
-        self.id_enable = UniWritePort(self)
+        self.if_enable = OutWire(UniWire,self)
+        self.id_enable = OutWire(UniWire,self)
 
         self.registry_sensitive()
 

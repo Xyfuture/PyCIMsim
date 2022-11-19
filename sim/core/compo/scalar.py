@@ -1,5 +1,6 @@
 from sim.circuit.module.registry import registry
-from sim.circuit.port.port import UniReadPort, UniWritePort
+# from sim.circuit.port.port import UniReadPort, UniWritePort
+from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegNext
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.des.simulator import Simulator
@@ -12,12 +13,14 @@ class Scalar(BaseCoreCompo):
     def __init__(self,sim):
         super(Scalar, self).__init__(sim)
 
-        self.id_scalar_port = UniReadPort(self)
-        self.reg_file_write = UniWritePort(self)
+        self.id_scalar_port = InWire(UniWire,self)
+        self.reg_file_write = OutWire(UniWire,self)
 
         self._reg = RegNext(self)
-        self._reg_read_port = self._reg.get_output_read_port()
-        self._reg_write_port = self._reg.get_input_write_port()
+        self._reg_input = UniWire(self)
+        self._reg_output = UniWire(self)
+
+        self._reg.connect(self._reg_input,self._reg_output)
 
         self.registry_sensitive()
 
@@ -25,11 +28,12 @@ class Scalar(BaseCoreCompo):
     def update_reg(self):
         payload = self.id_scalar_port.read()
         if payload:
-            self._reg_write_port.write(payload)
+            if payload['ex'] == 'scalar':
+                self._reg_input.write(payload)
 
-    @registry(['_reg_read_port'])
+    @registry(['_reg_output'])
     def execute(self):
-        payload = self._reg_read_port.read()
+        payload = self._reg_output.read()
         op = payload['aluop']
         rd_addr,rs1_data,rs2_data = payload['rd_addr'],payload['rs1_data'],payload['rs2_data']
         rd_data = 0

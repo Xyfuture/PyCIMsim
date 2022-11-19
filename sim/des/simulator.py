@@ -50,7 +50,7 @@ class Simulator:
         self._tmp_event_set = OrderedDict()
 
     def run(self):
-        # st = time.time()
+        st = time.time()
         while not self._event_queue.empty():
             tmp_event = self._event_queue.get()
             self._ctime = tmp_event.time
@@ -64,10 +64,10 @@ class Simulator:
                 self.flush_queue_buffer()
 
             self._event_cnt += 1
-            # if self._event_cnt % 100000 == 0 :
-            #     print("real time:{}".format(time.time()-st))
-            #     print("cycles:{}",self.current_time.tick)
-            #     st = time.time()
+            if self._event_cnt % 100000 == 0 :
+                print("real time:{}".format(time.time()-st))
+                print("cycles:{}",self.current_time.tick)
+                st = time.time()
 
     def add_compo(self, compo:BaseCompo):
         if isinstance(compo, BaseCompo):

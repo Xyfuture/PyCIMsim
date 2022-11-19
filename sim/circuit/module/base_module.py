@@ -3,6 +3,7 @@ from __future__ import annotations
 from sim.circuit.register.base_register import BaseRegister
 from sim.circuit.port.base_port import BasePort
 from sim.circuit.port.port import UniReadPort, UniWritePort, UniWire
+from sim.circuit.wire.base_wire import BaseWire
 from sim.des.base_compo import BaseCompo
 from sim.des.event import Event
 from sim.des.base_element import BaseElement
@@ -34,12 +35,15 @@ class BaseModule(BaseCompo):
                     port.add_callback(method)
 
     def __setattr__(self, key, value):
-        if isinstance(value, UniReadPort):
-            self._input_wires_dict[key] = value
-        elif isinstance(value, UniWritePort):
-            self._output_wires_dict[key] = value
-        elif isinstance(value, UniWire):
-            self._inner_wires_dict[key] = value
+        if isinstance(value, BaseWire):
+            if value.as_io_wire:
+                if value.as_input:
+                    self._input_wires_dict[key] = value
+                elif value.as_output:
+                    self._output_wires_dict[key] = value
+            else:
+                self._inner_wires_dict[key] = value
+
         elif isinstance(value, BaseRegister):
             self._registers_dict[key] = value
         elif isinstance(value, BaseModule):
@@ -50,8 +54,8 @@ class BaseModule(BaseCompo):
     def __floordiv__(self, other: BaseModule):
         for k in self._input_wires_dict:
             if k in other._output_wires_dict:
-                self._input_wires_dict[k] // other._output_wires_dict[k]
+                self._input_wires_dict[k] << other._output_wires_dict[k]
 
         for k in self._output_wires_dict:
             if k in other._input_wires_dict:
-                self._output_wires_dict[k] // other._input_wires_dict[k]
+                self._output_wires_dict[k] >> other._input_wires_dict[k]
