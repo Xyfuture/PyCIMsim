@@ -12,6 +12,7 @@ class TransferUnit(BaseCoreCompo):
     def __init__(self, sim, core_id, config=None):
         super(TransferUnit, self).__init__(sim)
         self._config = config
+        self.core_id = core_id
 
         self.id_transfer_port = InWire(UniWire,self)
 
@@ -30,11 +31,9 @@ class TransferUnit(BaseCoreCompo):
         self.trigger_input = UniWire(self)
         self.func_trigger.connect(self.trigger_input)
 
-        self._run_state = 'idle'
-
-        self._core_id = core_id
         self.noc_interface = SwitchInterface(self, core_id)
 
+        self._run_state = 'idle'
         self.sync_dict = {}
 
         self.state_value = 0

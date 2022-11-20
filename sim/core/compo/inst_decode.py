@@ -77,7 +77,7 @@ class InstDecode(BaseCoreCompo):
 
         jump_pc_payload = None
         # decode_payload = {'pc':pc,'inst':inst,'ex':None}
-        decode_payload = None
+        decode_payload = {'pc':pc,'inst':inst,'ex':None}
         op = inst['op']
         if op == 'seti':
             decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'add',
@@ -112,17 +112,23 @@ class InstDecode(BaseCoreCompo):
                               }
 
         elif op == 'vmax':
-            pass
+            decode_payload = {'ex':'vector','aluop':'vmax',
+                              'out_addr':rd_data,'in1_addr':rs1_data,'in2_addr':rs2_data,'len':inst['len']}
         elif op == 'vadd':
-            pass
+            decode_payload = {'ex': 'vector', 'aluop': 'vadd',
+                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
         elif op == 'vsub':
-            pass
+            decode_payload = {'ex': 'vector', 'aluop': 'vsub',
+                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
         elif op == 'vmul':
-            pass
+            decode_payload = {'ex': 'vector', 'aluop': 'vmul',
+                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
         elif op == 'vmului':
-            pass
+            decode_payload = {'ex': 'vector', 'aluop': 'vmului',
+                              'out_addr': rd_data, 'in1_addr': rs1_data, 'imm': inst['imm'], 'len': inst['len']}
         elif op == 'vact':
-            pass
+            decode_payload = {'ex': 'vector', 'aluop': 'vact',
+                              'out_addr': rd_data, 'in1_addr': rs1_data, 'type': inst['type'], 'len': inst['len']}
 
         elif op == 'sync':
             pass

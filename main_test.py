@@ -6,7 +6,7 @@ from sim.des.simulator import Simulator
 from sim.core.compo.inst_fetch import InstFetch
 from sim.core.compo.inst_decode import InstDecode, DecodeForward
 from sim.core.compo.register_files import RegisterFiles
-from sim.core.compo.scalar import Scalar
+from sim.core.compo.scalar import ScalarUnit
 from sim.core.compo.controller import Controller
 
 inst_buffer = [
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     inst_decode = InstDecode(sim)
     forward = DecodeForward(sim)
     ctrl = Controller(sim)
-    scalar = Scalar(sim)
+    scalar = ScalarUnit(sim)
     reg_file = RegisterFiles(sim)
 
 

@@ -9,9 +9,9 @@ from sim.des.base_compo import BaseCompo
 from sim.des.stime import Stime
 
 
-class Scalar(BaseCoreCompo):
+class ScalarUnit(BaseCoreCompo):
     def __init__(self,sim):
-        super(Scalar, self).__init__(sim)
+        super(ScalarUnit, self).__init__(sim)
 
         self.id_scalar_port = InWire(UniWire,self)
         self.reg_file_write = OutWire(UniWire,self)
