@@ -1,6 +1,6 @@
 from sim.circuit.module.basic_modules import RegSustain
 from sim.circuit.module.registry import registry
-from sim.circuit.port.port import UniReadPort, UniWritePort, UniPulseWire
+from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegNext, Trigger
 from sim.core.compo.base_core_compo import BaseCoreCompo
 
@@ -13,21 +13,22 @@ class TransferUnit(BaseCoreCompo):
         super(TransferUnit, self).__init__(sim)
         self._config = config
 
+        self.id_transfer_port = InWire(UniWire,self)
+
         self._reg_head = RegSustain(sim)
-
-        self.id_transfer_port = self._reg_head.get_data_input_read_port()
-
-        self._status_input_write_port = self._reg_head.get_status_input_write_port()
-        self._reg_head_output_read_port = self._reg_head.get_output_read_port()
+        self._status_input = UniWire(self)
+        self._reg_head_output = UniWire(self)
+        self._reg_head.connect(self.id_transfer_port,self._status_input,self._reg_head_output)
 
         self.transfer_buffer = MessageInterface(self,'transfer')
 
-        self.transfer_busy = UniWritePort(self)
+        self.transfer_busy = OutWire(UniWire,self)
 
         self.finish_wire = UniPulseWire(self)
 
         self.func_trigger = Trigger(self)
-        self.trigger_write_port = self.func_trigger.get_input_write_port()
+        self.trigger_input = UniWire(self)
+        self.func_trigger.connect(self.trigger_input)
 
         self._run_state = 'idle'
 
@@ -41,14 +42,14 @@ class TransferUnit(BaseCoreCompo):
         self.registry_sensitive()
 
     def initialize(self):
-        self._status_input_write_port.write(True)
+        self._status_input.write(True)
 
-    def calc_compute_latency(self):
+    def calc_compute_latency(self,payload):
         return 10
 
-    @registry(['_reg_head_output_read_port','finish_wire'])
+    @registry(['_reg_head_output','finish_wire'])
     def check_stall_status(self):
-        reg_head_payload = self._reg_head_output_read_port.read()
+        reg_head_payload = self._reg_head_output.read()
         finish_info = self.finish_wire.read()
 
         data_payload,idle = reg_head_payload['data_payload'],reg_head_payload['status']
@@ -73,15 +74,17 @@ class TransferUnit(BaseCoreCompo):
                 trigger_status = False
                 stall_status = {'busy':True}
 
-        self._status_input_write_port.write(new_idle_status)
-        self.trigger_write_port.write(trigger_status)
+        self._status_input.write(new_idle_status)
+        self.trigger_input.write(trigger_status)
         self.transfer_busy.write(stall_status)
 
     @registry(['func_trigger'])
     def process(self):
-        decode_payload = self._reg_head_output_read_port.read()
+        reg_head_payload = self._reg_head_output.read()
+        data_payload = reg_head_payload['data_payload']
 
-        op = decode_payload['op']
+        op = data_payload['aluop']
+
         if op == 'sync':
             pass
         elif op == 'wait_core':

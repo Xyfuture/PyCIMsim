@@ -44,15 +44,22 @@ class RegisterFiles(BaseCoreCompo):
         current_reg_files = self._reg_files_output.read()
 
         if decode_payload:
-            rs1_addr, rs2_addr = decode_payload['rs1_addr'], decode_payload['rs2_addr']
-            value = {'rs1_data': current_reg_files[rs1_addr], 'rs2_data': current_reg_files[rs2_addr]}
+            rd_addr,rs1_addr, rs2_addr = decode_payload['rd_addr'],\
+                                         decode_payload['rs1_addr'],\
+                                         decode_payload['rs2_addr']
+
+            value = {'rd_data':current_reg_files[rd_addr],
+                     'rs1_data': current_reg_files[rs1_addr],
+                     'rs2_data': current_reg_files[rs2_addr]}
 
             if scalar_payload:
-                rd_addr, rd_data = scalar_payload['rd_addr'], scalar_payload['rd_data']
-                if rs1_addr == rd_addr:
-                    value['rs1_data'] = rd_data
+                new_rd_addr, new_rd_data = scalar_payload['rd_addr'], scalar_payload['rd_data']
+                if rd_addr == new_rd_addr:
+                    value['rd_data'] = new_rd_data
+                if rs1_addr == new_rd_addr:
+                    value['rs1_data'] = new_rd_data
                 if rs2_addr == rd_addr:
-                    value['rs2_data'] = rd_data
+                    value['rs2_data'] = new_rd_data
 
             self.reg_file_read_data.write(value)
 

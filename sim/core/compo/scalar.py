@@ -34,12 +34,16 @@ class Scalar(BaseCoreCompo):
     @registry(['_reg_output'])
     def execute(self):
         payload = self._reg_output.read()
-        op = payload['aluop']
+        aluop = payload['aluop']
         rd_addr,rs1_data,rs2_data = payload['rd_addr'],payload['rs1_data'],payload['rs2_data']
         rd_data = 0
 
-        if op == 'add':
+        if aluop == 'add':
             rd_data = rs1_data + rs2_data
+        elif aluop == 'sub':
+            rd_data = rs1_data - rs2_data
+        elif aluop == 'mul':
+            rd_data = rs1_data * rs2_data
 
         self.reg_file_write.write({'rd_addr':rd_addr,'rd_data':rd_data})
 

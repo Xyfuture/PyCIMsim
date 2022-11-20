@@ -68,21 +68,23 @@ class UniPulseChannel(UniChannel):
 
 
 class UniWire(BaseWire):
-    def __init__(self, compo,as_input=True,as_output=True):
+    def __init__(self, compo,readable=True,writeable=True,as_io_wire=False):
         super(UniWire, self).__init__(compo)
 
         self._channel = UniChannel(self)
         self._callbacks = fl()
 
-        self._as_input = as_input
-        self._as_output = as_output
+        self._readable = readable
+        self._writeable = writeable
+
+        self._as_io_wire = as_io_wire
 
     def write(self, payload):
-        if self._as_output:
+        if self._writeable:
             self._channel.write_value(payload)
 
     def read(self):
-        if self._as_input:
+        if self._readable:
             return self._channel.read_value()
 
     def add_callback(self, *args):
@@ -97,42 +99,50 @@ class UniWire(BaseWire):
     def channel_callback(self):
         self._callbacks()
 
+    def set_readable(self,readable):
+        self._readable = readable
+
+    def set_writeable(self,writeable):
+        self._writeable = writeable
+
     def __rshift__(self, other:UniWire):
         if isinstance(other, BaseWire):
             self.add_callback(lambda: other.force_write(self.force_read()))
+            other.set_writeable(False)
         else:
             raise "error"
 
     def __lshift__(self, other:UniWire):
         if isinstance(other,BaseWire):
             other.add_callback(lambda: self.force_write(other.force_read()))
+            self.set_writeable(False)
         else:
             raise "error"
 
     @property
-    def as_input(self):
-        return self._as_input
+    def readable(self):
+        return self._readable
 
     @property
-    def as_output(self):
-        return self._as_output
+    def writeable(self):
+        return self._writeable
 
     @property
     def as_io_wire(self):
-        return self._as_input ^ self._as_output
+        return self._as_io_wire
 
 
 class UniPulseWire(UniWire):
-    def __init__(self, compo,as_input=True,as_output=True):
-        super(UniPulseWire, self).__init__(compo,as_input,as_output)
+    def __init__(self, compo,readable=True,writeable=True,as_io_wire=False):
+        super(UniPulseWire, self).__init__(compo,readable,writeable,as_io_wire)
 
         self._channel = UniPulseChannel(self)
 
 
-
 def InWire(wire_class,compo):
-    return wire_class(compo,as_input=True,as_output=False)
+    return wire_class(compo,readable=True,writeable=False,as_io_wire=True)
 
 def OutWire(wire_class,compo):
-    return wire_class(compo,as_input=False,as_output=True)
+    return wire_class(compo,readable=False,writeable=True,as_io_wire=True)
+
 
