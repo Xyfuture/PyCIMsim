@@ -24,9 +24,9 @@ class MessageBus(BaseCoreCompo):
     def sender_create_request(self, payload):
         dst, src = payload['dst'], payload['src']
         self._pend_buffer[dst].put(payload)
-        self.recevier_issue_request(dst)
+        self.receiver_issue_request(dst)
 
-    def recevier_issue_request(self, interface_id):
+    def receiver_issue_request(self, interface_id):
         if self._interfaces[interface_id].receive_ready:
             if not self._pend_buffer[interface_id].empty():
                 payload = self._pend_buffer[interface_id].get()
@@ -72,7 +72,9 @@ class MessageInterface(BaseElement):
             else:
                 self.add_callback(callback)
 
-        self._finish_send_callback = None
+        self._finish_send_callback_queue = queue.Queue()
+        self._send_payload_queue = queue.Queue()
+        self._send_ready = True
 
     def receive(self, payload):
         # self.make_event(lambda : self._process_receive(payload),self.next_handle_epsilon)
@@ -85,23 +87,36 @@ class MessageInterface(BaseElement):
     #     self._receive_callback(payload)
 
     def send(self, payload, callback):
-        self._finish_send_callback = callback
-
         assert 'dst' in payload and 'data_size' in payload
         payload['src'] = self._interface_id
 
-        self._bus.sender_create_request(payload)
+        self._send_payload_queue.put(payload)
+        self._finish_send_callback_queue.put(callback)
+
+        self.try_send()
+
+    def try_send(self):
+        if self._send_ready:
+            if not self._send_payload_queue.empty():
+                payload = self._send_payload_queue.get()
+                self._send_ready = False
+                self._bus.sender_create_request(payload)
 
     def forbid_receive(self):
         self._receive_ready = False
 
     def allow_receive(self):
         self._receive_ready = True
-        self._bus.recevier_issue_request(self._interface_id)
+        self._bus.receiver_issue_request(self._interface_id)
 
     def finish_send(self):
-        if callable(self._finish_send_callback):
-            self._finish_send_callback()
+        self._send_ready = True
+
+        callback = self._finish_send_callback_queue.get()
+        if callable(callback):
+            callback()
+
+        self.try_send()
 
     def set_bus(self, bus):
         self._bus = bus

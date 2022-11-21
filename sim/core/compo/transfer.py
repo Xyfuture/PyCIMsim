@@ -34,9 +34,15 @@ class TransferUnit(BaseCoreCompo):
         self.noc_interface = SwitchInterface(self, core_id)
 
         self._run_state = 'idle'
-        self.sync_dict = {}
+
+        self.sync_dict = {} # 记录一个每个核的sync_cnt
+        self.sync_cnt = 1
 
         self.state_value = 0
+        self.wait_core_dict = {} # core_id:value 等待自己的
+
+        self.wait_core_id = -1 # 等别人的
+        self.wait_state = -1
 
         self.registry_sensitive()
 
@@ -83,6 +89,7 @@ class TransferUnit(BaseCoreCompo):
         data_payload = reg_head_payload['data_payload']
 
         op = data_payload['aluop']
+        self._run_state = op
 
         if op == 'sync':
             pass
@@ -91,11 +98,105 @@ class TransferUnit(BaseCoreCompo):
         elif op == 'inc_state':
             pass
 
+    # 发射指令
+    def execute_sync(self,payload):
+        pass
 
+    def execute_wait_core(self,payload):
+
+        self.wait_state = payload['state']
+        self.wait_core_id = payload['core_id']
+
+        new_payload = {'src':self.core_id,'dst':self.wait_core_id,'data_size':1,
+                       'op':'wait_core','message':'start','state':self.wait_state}
+
+        self.noc_interface.send(new_payload,None)
+
+    def execute_inc_state(self,payload):
+        self.state_value += 1
+
+        finish_list = []
+        for k,v in self.wait_core_dict.items():
+            if v<= self.state_value:
+                finish_list.append(k)
+        for k in finish_list:
+            tmp_payload = {'src':self.core_id,'dst':k,'data_size':1,
+                           'op':'wait_core','message':'finish','state':self.state_value}
+            self.noc_interface.send(tmp_payload,None)
+            del self.wait_core_dict[k]
+
+
+
+
+    @registry(['noc_interface'])
+    def noc_receive_dispatch(self,payload):
+        op = payload['op']
+
+        if op == 'sync':
+            self.sync_receive_handler(payload)
+        elif op == 'wait_core':
+            self.wait_core_receive_handler(payload)
+
+    # 处理所有与sync有关的信息,不论目前是什么状态
     def sync_receive_handler(self,payload):
-        pass
+        def send_sync_finish_info():
+            if len(self.sync_dict):
+                k,v = self.sync_dict.popitem()
+                finish_payload = {'src':self.core_id,'dst':k,'data_size':1,
+                           'op':'sync','message':'finish','sync_cnt':sync_cnt}
 
+                self.noc_interface.send(finish_payload,send_sync_finish_info)
+            else:
+                self.finish_execute()
+
+        if self._run_state == 'sync':
+            if payload['message'] == 'start':
+                src = payload['src']
+                sync_cnt = payload['sync_cnt']
+                self.sync_dict[src] = sync_cnt
+
+                for k,v in self.sync_dict.items():
+                    if not v: # 仍有未运行结束的
+                        self.noc_interface.allow_receive()
+                        return
+                # 全部都已经运行到了
+                send_sync_finish_info()
+            elif payload['message'] == 'finish':
+                if self.sync_cnt == payload['sync_cnt']:
+                    self.sync_dict.clear()
+                    self.finish_execute()
+        else: # 当前如果不在运行sync指令 就直接跳过
+            pass
+        self.noc_interface.allow_receive()
+
+    # 处理所有与wait_core有关的信息,不论目前是什么状态
     def wait_core_receive_handler(self,payload):
+        if payload['message'] == 'start':
+            # 其他核开始等待本核
+            state = payload['state'] # 等待本核的state
+            if self.state_value >= state:
+                new_payload = {'src':self.core_id,'dst':payload['src'],'data_size':1,
+                               'op':'wait_core','message':'finish','state':self.state_value}
+                self.noc_interface.send(new_payload,None)
+            else:
+                self.wait_core_dict[payload['src']] = state
+        elif payload['message'] == 'finish':
+            assert self._run_state == 'wait_core'
+            assert self.wait_state <= payload['state']
+
+            self.finish_execute()
+        self.noc_interface.allow_receive()
+
+
+    def memory_receive_handler(self,payload):
         pass
 
-    # def
+    def finish_execute(self):
+        self._run_state = 'idle'
+        self.finish_wire.write(True)
+
+
+
+
+
+# 一些格式信息

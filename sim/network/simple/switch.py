@@ -6,8 +6,8 @@ class SwitchInterface(MessageInterface):
     def __init__(self,compo,interface_id):
         super(SwitchInterface, self).__init__(compo,interface_id)
 
-    def set_receive_callback(self,callback):
-        self._receive_callback = fl(callback)
+    def set_receive_callback(self,*callback):
+        self._receive_callback = fl(*callback)
 
 
 class Network(MessageBus):
