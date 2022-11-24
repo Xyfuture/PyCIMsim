@@ -3,13 +3,14 @@ from sim.circuit.module.registry import registry
 # from sim.circuit.port.port import UniReadPort, UniWritePort, UniPulseWire
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegNext, Trigger
+from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 
 from sim.core.compo.message_bus import MessageInterface
 
 
 class MatrixUnit(BaseCoreCompo):
-    def __init__(self,sim,config=None):
+    def __init__(self,sim,config:CoreConfig=None):
         super(MatrixUnit, self).__init__(sim)
         self._config = config
 
@@ -36,7 +37,10 @@ class MatrixUnit(BaseCoreCompo):
         self._status_input.write(True)
 
     def calc_compute_latency(self,payload):
-        return 1000
+        if self._config:
+            return self._config.matrix_latency
+        else:
+            return 1000
 
     @registry(['_reg_head_output','finish_wire'])
     def check_stall_status(self):
@@ -47,23 +51,23 @@ class MatrixUnit(BaseCoreCompo):
 
         new_idle_status = True
         trigger_status = False
-        stall_status = {'busy':False}
+        stall_status = False
 
         if idle:
             if data_payload:
                 if data_payload['ex'] == 'matrix':
                     new_idle_status = False
                     trigger_status = True
-                    stall_status = {'busy':True}
+                    stall_status = True
         else:
             if finish_info:
                 new_idle_status = True
                 trigger_status = False
-                stall_status = {'busy':False}
+                stall_status = False
             else:
                 new_idle_status = False
                 trigger_status = False
-                stall_status = {'busy':True}
+                stall_status = True
 
         self._status_input.write(new_idle_status)
         self.trigger_input.write(trigger_status)

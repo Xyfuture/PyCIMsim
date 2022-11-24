@@ -139,10 +139,10 @@ class UniPulseWire(UniWire):
         self._channel = UniPulseChannel(self)
 
 
-def InWire(wire_class,compo):
+def InWire(wire_class,compo)->UniWire:
     return wire_class(compo,readable=True,writeable=False,as_io_wire=True)
 
-def OutWire(wire_class,compo):
+def OutWire(wire_class,compo)->UniWire:
     return wire_class(compo,readable=False,writeable=True,as_io_wire=True)
 
 

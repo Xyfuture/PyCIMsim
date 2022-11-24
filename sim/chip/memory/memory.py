@@ -26,7 +26,6 @@ class Memory(BaseModule):
     def calc_latency(self,payload):
         return 100
 
-
     @registry(['memory_port'])
     def buffer_request(self,payload):
         self._request_buffer.put(payload)

@@ -45,23 +45,23 @@ class VectorUnit(BaseCoreCompo):
 
         new_idle_status = True
         trigger_status = False
-        stall_status = {'busy':False}
+        stall_status = False
 
         if idle:
             if data_payload:
                 if data_payload['ex'] == 'matrix':
                     new_idle_status = False
                     trigger_status = True
-                    stall_status = {'busy':True}
+                    stall_status = True
         else:
             if finish_info:
                 new_idle_status = True
                 trigger_status = False
-                stall_status = {'busy':False}
+                stall_status = False
             else:
                 new_idle_status = False
                 trigger_status = False
-                stall_status = {'busy':True}
+                stall_status = True
 
         self._status_input.write(new_idle_status)
         self.trigger_input.write(trigger_status)

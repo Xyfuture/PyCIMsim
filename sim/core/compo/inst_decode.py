@@ -12,6 +12,13 @@ from sim.des.utils import fl
 
 
 class InstDecode(BaseCoreCompo):
+
+    matrix_inst = {'gemv'}
+    vector_inst = {'vmax','vadd','vsub','vmul','vmului','vact'}
+    transfer_inst = {'sync','wait_core','inc_state',
+                     'dram_to_global','global_to_dram','global_to_local',
+                     'global_clr','global_cpy','local_clr','local_cpy'}
+
     def __init__(self, sim):
         super(InstDecode, self).__init__(sim)
 
@@ -31,8 +38,8 @@ class InstDecode(BaseCoreCompo):
 
         # 接收是否忙的信号线
         self.matrix_busy = InWire(UniWire, self)
-        # self.vector_busy = UniReadPort(self, self.process)
-        # self.transfer_busy = UniReadPort(self, self.process)
+        self.vector_busy = InWire(UniWire, self)
+        self.transfer_busy = InWire(UniWire, self)
         #
         # self.ex_busy = [self.matrix_busy, self.vector_busy, self.transfer_busy]
 
@@ -77,7 +84,7 @@ class InstDecode(BaseCoreCompo):
 
         jump_pc_payload = None
         # decode_payload = {'pc':pc,'inst':inst,'ex':None}
-        decode_payload = {'pc':pc,'inst':inst,'ex':None}
+        decode_payload = {'pc': pc, 'inst': inst, 'ex': None}
         op = inst['op']
         if op == 'seti':
             decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'add',
@@ -112,8 +119,8 @@ class InstDecode(BaseCoreCompo):
                               }
 
         elif op == 'vmax':
-            decode_payload = {'ex':'vector','aluop':'vmax',
-                              'out_addr':rd_data,'in1_addr':rs1_data,'in2_addr':rs2_data,'len':inst['len']}
+            decode_payload = {'ex': 'vector', 'aluop': 'vmax',
+                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
         elif op == 'vadd':
             decode_payload = {'ex': 'vector', 'aluop': 'vadd',
                               'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
@@ -131,31 +138,56 @@ class InstDecode(BaseCoreCompo):
                               'out_addr': rd_data, 'in1_addr': rs1_data, 'type': inst['type'], 'len': inst['len']}
 
         elif op == 'sync':
-            pass
+            decode_payload = {'ex': 'transfer', 'aluop': 'sync',
+                              'start_core': inst['st'], 'end_core': inst['ed']}
         elif op == 'wait_core':
-            pass
+            decode_payload = {'ex': 'transfer', 'aluop': 'wait_core',
+                              'state': inst['state'], 'core_id': inst['core_id']}
         elif op == 'inc_state':
+            decode_payload = {'ex': 'transfer', 'aluop': 'inc_sate'}
+
+        elif op == 'dram_to_global':
+            pass
+        elif op == 'global_to_dram':
+            pass
+        elif op == 'global_to_local':
+            pass
+        elif op == 'local_to_global':
+            pass
+        elif op == 'global_clr':
+            pass
+        elif op == 'local_clr':
+            pass
+        elif op == 'global_cpy':
+            pass
+        elif op == 'local_cpy':
             pass
 
         self.id_out.write(decode_payload)
         self.jump_pc.write(jump_pc_payload)
 
-    @registry(['_reg_output', 'matrix_busy'])
+    @registry(['_reg_output', 'matrix_busy','vector_busy','transfer_busy'])
     def check_stall(self):
         inst_payload = self._reg_output.read()
         if not inst_payload:
             return
 
         matrix_busy_payload = self.matrix_busy.read()
-        if not matrix_busy_payload:
-            return
+        vector_busy_payload = self.vector_busy.read()
+        transfer_busy_payload = self.transfer_busy.read()
 
         inst = inst_payload['inst']
-        busy = matrix_busy_payload['busy']
-        self.id_stall.write(False)
-        if inst['op'] == 'gemv':
-            if busy:
-                self.id_stall.write(True)
+        op = inst['op']
+
+        stall_info = False
+        if op in self.matrix_inst and matrix_busy_payload:
+            stall_info = True
+        elif op in self.vector_inst and vector_busy_payload:
+            stall_info = True
+        elif op in self.transfer_inst and transfer_busy_payload:
+            stall_info = True
+
+        self.id_stall.write(stall_info)
 
     def initialize(self):
         self.id_stall.write(False)

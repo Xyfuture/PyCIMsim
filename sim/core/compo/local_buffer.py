@@ -19,7 +19,11 @@ class LocalBuffer(BaseCoreCompo):
     def calc_latency(self,payload):
         data_size = payload['data_size']
         access_type =payload['access_type']
-        return 10
+        if self._config:
+            if access_type == 'read':
+                return
+        else :
+            return 10
 
     @registry(['buffer_port'])
     def handle_request(self,payload):

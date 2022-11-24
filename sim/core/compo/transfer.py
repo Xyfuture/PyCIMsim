@@ -61,23 +61,23 @@ class TransferUnit(BaseCoreCompo):
 
         new_idle_status = True
         trigger_status = False
-        stall_status = {'busy':False}
+        stall_status = False
 
         if idle:
             if data_payload:
                 if data_payload['ex'] == 'transfer':
                     new_idle_status = False
                     trigger_status = True
-                    stall_status = {'busy':True}
+                    stall_status = True
         else:
             if finish_info:
                 new_idle_status = True
                 trigger_status = False
-                stall_status = {'busy':False}
+                stall_status = False
             else:
                 new_idle_status = False
                 trigger_status = False
-                stall_status = {'busy':True}
+                stall_status = True
 
         self._status_input.write(new_idle_status)
         self.trigger_input.write(trigger_status)
@@ -124,9 +124,6 @@ class TransferUnit(BaseCoreCompo):
                            'op':'wait_core','message':'finish','state':self.state_value}
             self.noc_interface.send(tmp_payload,None)
             del self.wait_core_dict[k]
-
-
-
 
     @registry(['noc_interface'])
     def noc_receive_dispatch(self,payload):
@@ -186,7 +183,6 @@ class TransferUnit(BaseCoreCompo):
 
             self.finish_execute()
         self.noc_interface.allow_receive()
-
 
     def memory_receive_handler(self,payload):
         pass
