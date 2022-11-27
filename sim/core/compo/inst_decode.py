@@ -70,7 +70,7 @@ class InstDecode(BaseCoreCompo):
 
         self.reg_file_read_addr.write(reg_read_payload)
 
-    @registry(['_reg_output', 'reg_file_read_data'])
+    @registry(['_reg_output', 'reg_file_read_data','id_enable'])
     def decode_dispatch(self):
         if_payload = self._reg_output.read()
         if not if_payload:
@@ -85,6 +85,12 @@ class InstDecode(BaseCoreCompo):
         jump_pc_payload = None
         # decode_payload = {'pc':pc,'inst':inst,'ex':None}
         decode_payload = {'pc': pc, 'inst': inst, 'ex': None}
+
+        if not self.id_enable.read():
+            self.id_out.write(decode_payload)
+            self.jump_pc.write(jump_pc_payload)
+            return
+
         op = inst['op']
         if op == 'seti':
             decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'add',
@@ -115,8 +121,7 @@ class InstDecode(BaseCoreCompo):
                 jump_pc_payload = {'offset': inst['offset']}
 
         elif op == 'gemv':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'matrix', 'aluop': 'gemv',
-                              }
+            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'matrix', 'aluop': 'gemv'}
 
         elif op == 'vmax':
             decode_payload = {'ex': 'vector', 'aluop': 'vmax',
@@ -139,7 +144,7 @@ class InstDecode(BaseCoreCompo):
 
         elif op == 'sync':
             decode_payload = {'ex': 'transfer', 'aluop': 'sync',
-                              'start_core': inst['st'], 'end_core': inst['ed']}
+                              'start_core': inst['start_core'], 'end_core': inst['end_core']}
         elif op == 'wait_core':
             decode_payload = {'ex': 'transfer', 'aluop': 'wait_core',
                               'state': inst['state'], 'core_id': inst['core_id']}
@@ -179,13 +184,14 @@ class InstDecode(BaseCoreCompo):
         inst = inst_payload['inst']
         op = inst['op']
 
-        stall_info = False
-        if op in self.matrix_inst and matrix_busy_payload:
-            stall_info = True
-        elif op in self.vector_inst and vector_busy_payload:
-            stall_info = True
-        elif op in self.transfer_inst and transfer_busy_payload:
-            stall_info = True
+        # stall_info = False
+        # if op in self.matrix_inst and matrix_busy_payload:
+        #     stall_info = True
+        # elif op in self.vector_inst and vector_busy_payload:
+        #     stall_info = True
+        # elif op in self.transfer_inst and transfer_busy_payload:
+        #     stall_info = True
+        stall_info = matrix_busy_payload or vector_busy_payload or transfer_busy_payload
 
         self.id_stall.write(stall_info)
 
@@ -206,6 +212,13 @@ class DecodeForward(BaseCoreCompo):
 
         self.registry_sensitive()
 
+        self._map_port = {
+            'matrix':self.id_matrix_port,
+            'vector':self.id_vector_port,
+            'transfer':self.id_transfer_port,
+            'scalar':self.id_scalar_port
+        }
+
     def initialize(self):
         pass
 
@@ -213,7 +226,8 @@ class DecodeForward(BaseCoreCompo):
     def process(self):
         payload = self.id_out.read()
 
-        self.id_matrix_port.write(payload)
-        self.id_vector_port.write(payload)
-        self.id_transfer_port.write(payload)
-        self.id_scalar_port.write(payload)
+        for port_name in self._map_port:
+            if port_name == payload['ex']:
+                self._map_port[port_name].write(payload)
+            else :
+                self._map_port[port_name].write(None)

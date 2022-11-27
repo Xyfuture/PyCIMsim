@@ -83,6 +83,16 @@ class TransferUnit(BaseCoreCompo):
         self.trigger_input.write(trigger_status)
         self.transfer_busy.write(stall_status)
 
+    @registry(['noc_interface'])
+    def noc_receive_dispatch(self,payload):
+        op = payload['op']
+
+        if op == 'sync':
+            self.sync_receive_handler(payload)
+        elif op == 'wait_core':
+            self.wait_core_receive_handler(payload)
+
+    # 发射指令
     @registry(['func_trigger'])
     def process(self):
         reg_head_payload = self._reg_head_output.read()
@@ -92,15 +102,61 @@ class TransferUnit(BaseCoreCompo):
         self._run_state = op
 
         if op == 'sync':
-            pass
+            self.execute_sync(data_payload)
         elif op == 'wait_core':
-            pass
+            self.execute_wait_core(data_payload)
         elif op == 'inc_state':
-            pass
+            self.execute_inc_state(data_payload)
 
-    # 发射指令
     def execute_sync(self,payload):
-        pass
+        start_core,end_core = payload['start_core'],payload['end_core']
+        # 设置_run_state 给接收使用
+        self._run_state = 'sync'
+
+        # 初始化同步dict  发送自己开始的数据给其他的核
+        for i in range(start_core,end_core+1):
+            self.sync_dict[i] = 0
+
+            start_payload = {'src':self.core_id,'dst':i,'data_size':1,
+                             'op':'sync','message':'start','sync_cnt':self.sync_cnt}
+
+            self.noc_interface.send(start_payload,None)
+
+    # 处理所有与sync有关的信息,不论目前是什么状态
+    def sync_receive_handler(self,payload):
+        def send_sync_finish_info():
+
+            if len(self.sync_dict):
+                k,v = self.sync_dict.popitem()
+                finish_payload = {'src':self.core_id,'dst':k,'data_size':1,
+                           'op':'sync','message':'finish','sync_cnt':self.sync_cnt - 1}
+
+                self.noc_interface.send(finish_payload,send_sync_finish_info)
+            else:
+                self.finish_execute()
+
+        if self._run_state == 'sync':
+            if payload['message'] == 'start':
+                src = payload['src']
+                sync_cnt = payload['sync_cnt']
+                if self.sync_cnt == sync_cnt:
+                    self.sync_dict[src] = sync_cnt
+
+                for k,v in self.sync_dict.items():
+                    if not v: # 仍有未运行结束的
+                        self.noc_interface.allow_receive()
+                        return
+                # 全部都已经运行到了
+                self.sync_cnt += 1
+                send_sync_finish_info()
+            elif payload['message'] == 'finish':
+                if self.sync_cnt == payload['sync_cnt']:
+                    self.sync_dict.clear()
+                    self.sync_cnt += 1
+                    self.finish_execute()
+        else: # 当前如果不在运行sync指令 就直接跳过
+            pass
+        self.noc_interface.allow_receive()
 
     def execute_wait_core(self,payload):
 
@@ -111,60 +167,6 @@ class TransferUnit(BaseCoreCompo):
                        'op':'wait_core','message':'start','state':self.wait_state}
 
         self.noc_interface.send(new_payload,None)
-
-    def execute_inc_state(self,payload):
-        self.state_value += 1
-
-        finish_list = []
-        for k,v in self.wait_core_dict.items():
-            if v<= self.state_value:
-                finish_list.append(k)
-        for k in finish_list:
-            tmp_payload = {'src':self.core_id,'dst':k,'data_size':1,
-                           'op':'wait_core','message':'finish','state':self.state_value}
-            self.noc_interface.send(tmp_payload,None)
-            del self.wait_core_dict[k]
-
-    @registry(['noc_interface'])
-    def noc_receive_dispatch(self,payload):
-        op = payload['op']
-
-        if op == 'sync':
-            self.sync_receive_handler(payload)
-        elif op == 'wait_core':
-            self.wait_core_receive_handler(payload)
-
-    # 处理所有与sync有关的信息,不论目前是什么状态
-    def sync_receive_handler(self,payload):
-        def send_sync_finish_info():
-            if len(self.sync_dict):
-                k,v = self.sync_dict.popitem()
-                finish_payload = {'src':self.core_id,'dst':k,'data_size':1,
-                           'op':'sync','message':'finish','sync_cnt':sync_cnt}
-
-                self.noc_interface.send(finish_payload,send_sync_finish_info)
-            else:
-                self.finish_execute()
-
-        if self._run_state == 'sync':
-            if payload['message'] == 'start':
-                src = payload['src']
-                sync_cnt = payload['sync_cnt']
-                self.sync_dict[src] = sync_cnt
-
-                for k,v in self.sync_dict.items():
-                    if not v: # 仍有未运行结束的
-                        self.noc_interface.allow_receive()
-                        return
-                # 全部都已经运行到了
-                send_sync_finish_info()
-            elif payload['message'] == 'finish':
-                if self.sync_cnt == payload['sync_cnt']:
-                    self.sync_dict.clear()
-                    self.finish_execute()
-        else: # 当前如果不在运行sync指令 就直接跳过
-            pass
-        self.noc_interface.allow_receive()
 
     # 处理所有与wait_core有关的信息,不论目前是什么状态
     def wait_core_receive_handler(self,payload):
@@ -184,10 +186,27 @@ class TransferUnit(BaseCoreCompo):
             self.finish_execute()
         self.noc_interface.allow_receive()
 
+    def execute_inc_state(self,payload):
+        self.state_value += 1
+
+        finish_list = []
+        for k,v in self.wait_core_dict.items():
+            if v<= self.state_value:
+                finish_list.append(k)
+        for k in finish_list:
+            tmp_payload = {'src':self.core_id,'dst':k,'data_size':1,
+                           'op':'wait_core','message':'finish','state':self.state_value}
+            self.noc_interface.send(tmp_payload,None)
+            del self.wait_core_dict[k]
+
+    def execute_memory(self,payload):
+        pass
+
     def memory_receive_handler(self,payload):
         pass
 
     def finish_execute(self):
+        # print("core_id:{} finish sync".format(self.core_id))
         self._run_state = 'idle'
         self.finish_wire.write(True)
 
@@ -196,3 +215,6 @@ class TransferUnit(BaseCoreCompo):
 
 
 # 一些格式信息
+# {'src':1,'dst':2,'data_size':1,'op':'sync','message':'start/finish','sync_cnt':sync_cnt}
+# {'src':1,'dst':2,'data_size':1,'op':'wait_core','message':'finish','state':self.state_value}
+# {'src':1,'dst':2,'data_size':1,'op':'wait_core','message':'start','state':self.wait_state}

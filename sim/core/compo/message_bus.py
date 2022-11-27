@@ -132,7 +132,8 @@ class MessageInterface(BaseElement):
     def __mod__(self, other):
         if isinstance(other,MessageBus):
             other.__mod__(self)
-        raise "Error Operator"
+        else:
+            raise "Error Operator"
 
     def add_callback(self,func):
         self._receive_callback.add_func(func)

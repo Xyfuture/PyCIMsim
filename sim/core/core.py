@@ -43,7 +43,7 @@ class Core(BaseCompo):
         self.forward // self.scalar
         self.forward // self.matrix
         self.forward // self.vector
-        self.forward // self.vector
+        self.forward // self.transfer
 
         self.scalar // self.reg_file
 
@@ -58,6 +58,7 @@ class Core(BaseCompo):
 
         self.transfer.noc_interface % noc
 
+        self.inst_fetch.set_inst_buffer(self._inst_buffer)
 
     def initialize(self):
         pass
