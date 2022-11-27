@@ -198,6 +198,7 @@ class TransferUnit(BaseCoreCompo):
                            'op':'wait_core','message':'finish','state':self.state_value}
             self.noc_interface.send(tmp_payload,None)
             del self.wait_core_dict[k]
+        self.finish_execute()
 
     def execute_memory(self,payload):
         pass

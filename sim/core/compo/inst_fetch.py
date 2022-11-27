@@ -18,6 +18,7 @@ class InstFetch(BaseCoreCompo):
         super(InstFetch, self).__init__(sim)
 
         self._inst_buffer = []
+        self._inst_buffer_len = 0
 
         self._pc_reg = RegEnable(self)
 
@@ -31,10 +32,6 @@ class InstFetch(BaseCoreCompo):
 
         self._pc_reg.connect(self._pc_input,self.if_enable,self._pc_output)
 
-        # self._pc_input = self._pc_reg.get_input_write_port()
-        # self._pc_output = self._pc_reg.get_output_read_port()
-        #
-        # self.if_enable = self._pc_reg.get_enable_read_port()
 
         self.registry_sensitive()
 
@@ -55,6 +52,9 @@ class InstFetch(BaseCoreCompo):
 
         pc = self._pc_output.read()
         jump_payload = self.jump_pc.read()
+        if pc >= self._inst_buffer_len:
+            return
+
         # if not pc:
         #     return
         fetch_inst()
@@ -82,3 +82,4 @@ class InstFetch(BaseCoreCompo):
 
     def set_inst_buffer(self,inst_buffer):
         self._inst_buffer = inst_buffer
+        self._inst_buffer_len = len(self._inst_buffer)

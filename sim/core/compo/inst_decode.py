@@ -121,7 +121,8 @@ class InstDecode(BaseCoreCompo):
                 jump_pc_payload = {'offset': inst['offset']}
 
         elif op == 'gemv':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'matrix', 'aluop': 'gemv'}
+            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'matrix', 'aluop': 'gemv',
+                              'out_addr':rd_data,'vec_addr':rs1_data,'pe_assign':inst['pe_assign'],'relu':inst['relu']}
 
         elif op == 'vmax':
             decode_payload = {'ex': 'vector', 'aluop': 'vmax',
@@ -149,7 +150,7 @@ class InstDecode(BaseCoreCompo):
             decode_payload = {'ex': 'transfer', 'aluop': 'wait_core',
                               'state': inst['state'], 'core_id': inst['core_id']}
         elif op == 'inc_state':
-            decode_payload = {'ex': 'transfer', 'aluop': 'inc_sate'}
+            decode_payload = {'ex': 'transfer', 'aluop': 'inc_state'}
 
         elif op == 'dram_to_global':
             pass

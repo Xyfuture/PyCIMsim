@@ -92,7 +92,7 @@ class MatrixUnit(BaseCoreCompo):
         self.make_event(f,self.current_time+latency)
 
     def finish_execute(self):
-        # print("finish gemv time:{}".format(self.current_time))
+        print("finish gemv time:{}".format(self.current_time))
 
         self.matrix_buffer.allow_receive()
         self.finish_wire.write(True)
