@@ -34,6 +34,7 @@ class VectorUnit(BaseCoreCompo):
         self._status_input.write(True)
 
     def calc_compute_latency(self,payload):
+
         return 10
 
     @registry(['_reg_head_output','finish_wire'])
@@ -78,7 +79,7 @@ class VectorUnit(BaseCoreCompo):
         self.vector_buffer.send(memory_read_request, None)
 
     @registry(['vector_buffer'])
-    def execute_gemv(self, payload):
+    def execute_vector(self, payload):
         latency = self.calc_compute_latency(self._reg_head_output.read()['data_payload'])
         memory_write_request = {'src': 'vector', 'dst': 'buffer', 'data_size': 128, 'access_type': 'write'}
         f = lambda: self.vector_buffer.send(memory_write_request, self.finish_execute)

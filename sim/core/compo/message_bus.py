@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import queue
+from math import ceil
 from typing import Dict
 
+from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.des.base_element import BaseElement
 from sim.des.stime import Stime
@@ -10,10 +12,11 @@ from sim.des.utils import fl
 
 
 class MessageBus(BaseCoreCompo):
-    def __init__(self, sim, config=None):
+    def __init__(self, sim, config:CoreConfig=None):
         super(MessageBus, self).__init__(sim)
 
-        self._config = None
+        self._core_config = config
+        self._config = config.local_bus
 
         self._interfaces: Dict[str, MessageInterface] = {}
         self._pend_buffer: Dict[str, queue.Queue] = {}
@@ -44,7 +47,14 @@ class MessageBus(BaseCoreCompo):
         self._interfaces[src].finish_send()
 
     def calc_transfer_latency(self, payload):
-        return 10
+        data_size = payload['data_size']
+
+        times = ceil(data_size/self._config.bus_width)
+        if self._config:
+            self.add_dynamic_energy(self._config.energy * times)
+            return self._config.latency * times
+        else :
+            return 10
 
     def __mod__(self, interface):
         interface_id = interface.interface_id

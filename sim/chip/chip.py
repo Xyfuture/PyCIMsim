@@ -13,4 +13,3 @@ class Chip(BaseCompo):
     def read_inst_buffer(self):
         pass
 
-    []

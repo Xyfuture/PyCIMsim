@@ -2,6 +2,7 @@ from sim.circuit.module.basic_modules import RegSustain
 from sim.circuit.module.registry import registry
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegNext, Trigger
+from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 
 from sim.core.compo.message_bus import MessageInterface
@@ -9,7 +10,7 @@ from sim.network.simple.switch import SwitchInterface
 
 
 class TransferUnit(BaseCoreCompo):
-    def __init__(self, sim, core_id, config=None):
+    def __init__(self, sim, core_id, config:CoreConfig=None):
         super(TransferUnit, self).__init__(sim)
         self._config = config
         self.core_id = core_id
