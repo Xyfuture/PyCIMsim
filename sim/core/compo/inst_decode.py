@@ -3,6 +3,7 @@ from sim.circuit.module.registry import registry
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegEnable
 from sim.core.compo.base_core_compo import BaseCoreCompo
+from sim.core.compo.connection.payloads import *
 from sim.des.simulator import Simulator
 from sim.des.event import Event
 from sim.des.base_compo import BaseCompo
@@ -12,12 +13,11 @@ from sim.des.utils import fl
 
 
 class InstDecode(BaseCoreCompo):
-
     matrix_inst = {'gemv'}
-    vector_inst = {'vmax','vadd','vsub','vmul','vmului','vact'}
-    transfer_inst = {'sync','wait_core','inc_state',
-                     'dram_to_global','global_to_dram','global_to_local',
-                     'global_clr','global_cpy','local_clr','local_cpy'}
+    vector_inst = {'vmax', 'vadd', 'vsub', 'vmul', 'vmului', 'vact'}
+    transfer_inst = {'sync', 'wait_core', 'inc_state',
+                     'dram_to_global', 'global_to_dram', 'global_to_local',
+                     'global_clr', 'global_cpy', 'local_clr', 'local_cpy'}
 
     def __init__(self, sim):
         super(InstDecode, self).__init__(sim)
@@ -70,7 +70,7 @@ class InstDecode(BaseCoreCompo):
 
         self.reg_file_read_addr.write(reg_read_payload)
 
-    @registry(['_reg_output', 'reg_file_read_data','id_enable'])
+    @registry(['_reg_output', 'reg_file_read_data', 'id_enable'])
     def decode_dispatch(self):
         if_payload = self._reg_output.read()
         if not if_payload:
@@ -82,9 +82,9 @@ class InstDecode(BaseCoreCompo):
         if reg_payload:
             rd_data, rs1_data, rs2_data = reg_payload['rd_data'], reg_payload['rs1_data'], reg_payload['rs2_data']
 
+        # 没有信息时为None
         jump_pc_payload = None
-        # decode_payload = {'pc':pc,'inst':inst,'ex':None}
-        decode_payload = {'pc': pc, 'inst': inst, 'ex': None}
+        decode_payload = None
 
         if not self.id_enable.read():
             self.id_out.write(decode_payload)
@@ -93,24 +93,31 @@ class InstDecode(BaseCoreCompo):
 
         op = inst['op']
         if op == 'seti':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'add',
-                              'rd_addr': inst['rd_addr'], 'rs1_data': inst['imm'], 'rs2_data': 0}
+            decode_payload = ScalarInfo.load_dict({'pc': pc, 'ex': 'scalar', 'op': 'add',
+                                                   'rd_addr': inst['rd_addr'], 'rs1_data': inst['imm'],
+                                                   'rs2_data': 0})
         elif op == 'sub':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'sub',
-                              'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data, 'rs2_data': rs2_data}
+            decode_payload = ScalarInfo.load_dict({'pc': pc, 'ex': 'scalar', 'op': 'sub',
+                                                   'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data,
+                                                   'rs2_data': rs2_data})
         elif op == 'add':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'add',
-                              'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data, 'rs2_data': rs2_data}
+            decode_payload = ScalarInfo.load_dict({'pc': pc, 'ex': 'scalar', 'op': 'add',
+                                                   'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data,
+                                                   'rs2_data': rs2_data})
         elif op == 'addi':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'add',
-                              'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data, 'rs2_data': inst['imm']}
+            decode_payload = ScalarInfo.load_dict({'pc': pc, 'ex': 'scalar', 'op': 'add',
+                                                   'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data,
+                                                   'rs2_data': inst['imm']})
         elif op == 'muli':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'mul',
-                              'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data, 'rs2_data': inst['imm']}
+            decode_payload = ScalarInfo.load_dict({'pc': pc, 'ex': 'scalar', 'op': 'mul',
+                                                   'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data,
+                                                   'rs2_data': inst['imm']})
         elif op == 'mul':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'scalar', 'aluop': 'mul',
-                              'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data, 'rs2_data': rs2_data}
+            decode_payload = ScalarInfo.load_dict({'pc': pc, 'ex': 'scalar', 'op': 'mul',
+                                                   'rd_addr': inst['rd_addr'], 'rs1_data': rs1_data,
+                                                   'rs2_data': rs2_data})
 
+        # 这种情况下 decode_payload是空的
         elif op == 'j':
             jump_pc_payload = {'offset': inst['offset']}
         elif op == 'jnei':
@@ -121,36 +128,44 @@ class InstDecode(BaseCoreCompo):
                 jump_pc_payload = {'offset': inst['offset']}
 
         elif op == 'gemv':
-            decode_payload = {'pc': pc, 'inst': inst, 'ex': 'matrix', 'aluop': 'gemv',
-                              'out_addr':rd_data,'vec_addr':rs1_data,'pe_assign':inst['pe_assign'],'relu':inst['relu']}
+            decode_payload = MatrixInfo.load_dict({'pc': pc, 'inst': inst, 'ex': 'matrix', 'op': 'gemv',
+                                                   'out_addr': rd_data, 'vec_addr': rs1_data,
+                                                   'pe_assign': inst['pe_assign'],
+                                                   'relu': inst['relu']})
 
         elif op == 'vmax':
-            decode_payload = {'ex': 'vector', 'aluop': 'vmax',
-                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
+            decode_payload = VectorInfo.load_dict({'pc': pc, 'ex': 'vector', 'op': 'vmax',
+                                                   'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data,
+                                                   'vec_len': inst['len']})
         elif op == 'vadd':
-            decode_payload = {'ex': 'vector', 'aluop': 'vadd',
-                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
+            decode_payload = VectorInfo.load_dict({'pc': pc, 'ex': 'vector', 'op': 'vadd',
+                                                   'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data,
+                                                   'vec_len': inst['len']})
         elif op == 'vsub':
-            decode_payload = {'ex': 'vector', 'aluop': 'vsub',
-                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
+            decode_payload = VectorInfo.load_dict({'pc': pc, 'ex': 'vector', 'op': 'vsub',
+                                                   'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data,
+                                                   'vec_len': inst['len']})
         elif op == 'vmul':
-            decode_payload = {'ex': 'vector', 'aluop': 'vmul',
-                              'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data, 'len': inst['len']}
+            decode_payload = VectorInfo.load_dict({'pc': pc, 'ex': 'vector', 'op': 'vmul',
+                                                   'out_addr': rd_data, 'in1_addr': rs1_data, 'in2_addr': rs2_data,
+                                                   'vec_len': inst['len']})
         elif op == 'vmului':
-            decode_payload = {'ex': 'vector', 'aluop': 'vmului',
-                              'out_addr': rd_data, 'in1_addr': rs1_data, 'imm': inst['imm'], 'len': inst['len']}
+            decode_payload = VectorInfo.load_dict({'pc': pc, 'ex': 'vector', 'op': 'vmului',
+                                                   'out_addr': rd_data, 'in1_addr': rs1_data, 'imm': inst['imm'],
+                                                   'vec_len': inst['len']})
         elif op == 'vact':
-            decode_payload = {'ex': 'vector', 'aluop': 'vact',
-                              'out_addr': rd_data, 'in1_addr': rs1_data, 'type': inst['type'], 'len': inst['len']}
+            decode_payload = VectorInfo.load_dict({'pc': pc, 'ex': 'vector', 'op': 'vact',
+                                                   'out_addr': rd_data, 'in1_addr': rs1_data, 'act_type': inst['type'],
+                                                   'vec_len': inst['len']})
 
         elif op == 'sync':
-            decode_payload = {'ex': 'transfer', 'aluop': 'sync',
+            decode_payload = {'pc': pc, 'ex': 'transfer', 'op': 'sync',
                               'start_core': inst['start_core'], 'end_core': inst['end_core']}
         elif op == 'wait_core':
-            decode_payload = {'ex': 'transfer', 'aluop': 'wait_core',
+            decode_payload = {'pc': pc, 'ex': 'transfer', 'op': 'wait_core',
                               'state': inst['state'], 'core_id': inst['core_id']}
         elif op == 'inc_state':
-            decode_payload = {'ex': 'transfer', 'aluop': 'inc_state'}
+            decode_payload = {'pc': pc, 'ex': 'transfer', 'op': 'inc_state'}
 
         elif op == 'dram_to_global':
             pass
@@ -172,7 +187,7 @@ class InstDecode(BaseCoreCompo):
         self.id_out.write(decode_payload)
         self.jump_pc.write(jump_pc_payload)
 
-    @registry(['_reg_output', 'matrix_busy','vector_busy','transfer_busy'])
+    @registry(['_reg_output', 'matrix_busy', 'vector_busy', 'transfer_busy'])
     def check_stall(self):
         inst_payload = self._reg_output.read()
         if not inst_payload:
@@ -214,10 +229,10 @@ class DecodeForward(BaseCoreCompo):
         self.registry_sensitive()
 
         self._map_port = {
-            'matrix':self.id_matrix_port,
-            'vector':self.id_vector_port,
-            'transfer':self.id_transfer_port,
-            'scalar':self.id_scalar_port
+            'matrix': self.id_matrix_port,
+            'vector': self.id_vector_port,
+            'transfer': self.id_transfer_port,
+            'scalar': self.id_scalar_port
         }
 
     def initialize(self):
@@ -227,8 +242,17 @@ class DecodeForward(BaseCoreCompo):
     def process(self):
         payload = self.id_out.read()
 
-        for port_name in self._map_port:
-            if port_name == payload['ex']:
-                self._map_port[port_name].write(payload)
-            else :
-                self._map_port[port_name].write(None)
+        # if not payload:
+        #     for k,v in self._map_port.items():
+        #         v.write(payload)
+        #
+        # for port_name in self._map_port:
+        #     if port_name == payload['ex']:
+        #         self._map_port[port_name].write(payload)
+        #     else:
+        #         self._map_port[port_name].write(None)
+
+        for k,v in self._map_port:
+            v.write(None)
+        if payload:
+            self._map_port[payload['ex']].write(payload)

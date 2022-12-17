@@ -3,6 +3,7 @@ from math import floor, ceil
 from sim.circuit.module.registry import registry
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
+from sim.core.compo.connection.payloads import MemoryRequest, BusPayload, MemoryReadValue
 from sim.core.compo.message_bus import MessageInterface
 
 
@@ -20,11 +21,11 @@ class LocalBuffer(BaseCoreCompo):
     def initialize(self):
         pass
 
-    def calc_latency(self, payload):
-        data_size = payload['data_size']
-        access_type = payload['access_type']
+    def calc_latency(self, memory_request: MemoryRequest):
+        data_size = memory_request.data_size
+        access_type = memory_request.access_type
 
-        times = ceil(data_size/self._config.data_width)
+        times = ceil(data_size / self._config.data_width)
 
         if self._config:
             if access_type == 'read':
@@ -37,20 +38,23 @@ class LocalBuffer(BaseCoreCompo):
             return 10
 
     @registry(['buffer_port'])
-    def handle_request(self, payload):
-        # data_size = payload['data_size']
-        # access_type =payload['access_type']
+    def handle_request(self, bus_payload: BusPayload):
 
-        latency = self.calc_latency(payload)
+        latency = self.calc_latency(bus_payload.payload)
 
-        self.make_event(lambda: self.finish_request(payload), self.current_time + latency)
+        self.make_event(lambda: self.finish_request(bus_payload), self.current_time + latency)
 
-    def finish_request(self, payload):
-        access_type = payload['access_type']
+    def finish_request(self, bus_payload: BusPayload):
+        memory_request = bus_payload.payload
+        access_type = memory_request.access_type
 
         if access_type == 'read':
-            src = payload['src']
-            read_payload = {'src': 'buffer', 'dst': src, 'data': None, 'data_size': 128}
+
+            read_payload = BusPayload(
+                src='buffer', dst=bus_payload.src, data_size=memory_request.data_size,
+                payload=MemoryReadValue()
+            )
+
             self.buffer_port.send(read_payload, lambda: self.buffer_port.allow_receive())
         elif access_type == 'write':
             self.buffer_port.allow_receive()

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class MemoryConfig(BaseModel):
+    memory_size: int = 1024 * 1024  # Bytes
     data_width: int = 16  # Bytes
 
     write_latency: int = 10  # cycles
@@ -14,6 +15,7 @@ class MemoryConfig(BaseModel):
 
 
 class BusConfig(BaseModel):
+    bus_topology: str = 'shared'  # 'mesh'
     bus_width: int = 15  # Bytes
 
     latency: int = 1  # cycles
@@ -21,9 +23,16 @@ class BusConfig(BaseModel):
 
 
 class CoreConfig(BaseModel):
+    # precision setting
+    input_precision: int = 16  # bits
+    weight_precision: int = 16  # bits
+
     # matrix unit
     matrix_latency: int = 1000  # cycles
     matrix_energy_per_pe: float = 1.0  # nJ
+    device_precision: int = 2  # bits
+    xbar_size:Tuple[int,int] = (128,128)
+    pe_layout:Tuple[int,int] = (32,8)
 
     # vector unit
     vector_width: int = 32  # alus per vector unit
@@ -41,7 +50,6 @@ class CoreConfig(BaseModel):
     inst_decode_energy: float = 1.0
 
     transfer_energy: float = 1.0
-
 
 
 class ChipConfig(BaseModel):

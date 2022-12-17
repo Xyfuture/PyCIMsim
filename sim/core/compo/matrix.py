@@ -1,3 +1,5 @@
+from math import ceil
+
 from sim.circuit.module.basic_modules import RegSustain
 from sim.circuit.module.registry import registry
 # from sim.circuit.port.port import UniReadPort, UniWritePort, UniPulseWire
@@ -5,6 +7,7 @@ from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegNext, Trigger
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
+from sim.core.compo.connection.payloads import MatrixInfo, MemoryRequest, MemoryReadValue, BusPayload
 
 from sim.core.compo.message_bus import MessageInterface
 
@@ -81,19 +84,40 @@ class MatrixUnit(BaseCoreCompo):
         if not decode_payload:
             return
 
-        memory_read_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'read'}
+        matrix_info: MatrixInfo = decode_payload['data_payload']
+
+        # 计算需要的数据量
+        input_vec_size = ceil(matrix_info.pe_assign[1][0] * self._config.xbar_size[0]
+                              * self._config.input_precision / 8)  # Bytes not bits
+
+        # memory_read_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'read'}
+        memory_read_request = BusPayload(
+            src='matrix', dst='buffer', data_size=0, # 是请求的大小
+            payload=MemoryRequest(access_type='read', addr=matrix_info.vec_addr, data_size=input_vec_size)
+        )
+
         self.matrix_buffer.send(memory_read_request, None)
 
     @registry(['matrix_buffer'])
     def execute_gemv(self, payload):
-        latency = self.calc_compute_latency(self._reg_head_output.read()['data_payload'])
-        memory_write_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'write'}
+        matrix_info: MatrixInfo = self._reg_head_output.read()['data_payload']
+        output_vec_size = ceil(matrix_info.pe_assign[1][1] * self._config.xbar_size[1] * self._config.device_precision
+                               * (self._config.input_precision / 8) / self._config.weight_precision)  # Bytes
+
+        latency = self.calc_compute_latency(matrix_info)
+        # memory_write_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'write'}
+
+        memory_write_request = BusPayload(
+            src='matrix', dst='buffer', data_size=output_vec_size,
+            payload=MemoryRequest(access_type='write', data_size=output_vec_size, addr=matrix_info.out_addr)
+        )
+
         f = lambda: self.matrix_buffer.send(memory_write_request, self.finish_execute)
 
         self.make_event(f, self.current_time + latency)
 
     def finish_execute(self):
-        print("finish gemv time:{}".format(self.current_time))
+        # print("finish gemv time:{}".format(self.current_time))
 
         self.matrix_buffer.allow_receive()
         self.finish_wire.write(True)

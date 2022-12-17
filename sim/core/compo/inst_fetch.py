@@ -60,18 +60,6 @@ class InstFetch(BaseCoreCompo):
         fetch_inst()
         update_pc()
 
-    # @registry_safe(['_pc_output','jump_pc'], ['_pc_input','if_id_port'])
-    # def try_new(self,pc,jump_payload):
-    #     inst_payload = {'pc': pc, 'inst': self._inst_buffer[pc]}
-    #     if jump_payload:
-    #         inst_payload = {'pc': -1, 'inst': {'op': 'nop'}}
-    #
-    #     next_pc = pc + 1
-    #     # 如果这个周期内没发送jump,那么就不更新
-    #     if jump_payload :
-    #         next_pc = pc + jump_payload['offset']
-    #     return next_pc,inst_payload
-
     def initialize(self):
         self._pc_reg.initialize(10)
 

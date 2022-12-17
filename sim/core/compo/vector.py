@@ -1,13 +1,17 @@
+from math import ceil
+
 from sim.circuit.module.basic_modules import RegSustain
 from sim.circuit.module.registry import registry
 from sim.circuit.register.register import Trigger
+from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
+from sim.core.compo.connection.payloads import VectorInfo, BusPayload, MemoryRequest
 from sim.core.compo.message_bus import MessageInterface
 
 
 class VectorUnit(BaseCoreCompo):
-    def __init__(self,sim,config=None):
+    def __init__(self,sim,config:CoreConfig=None):
         super(VectorUnit, self).__init__(sim)
 
         self._config = config
@@ -33,9 +37,13 @@ class VectorUnit(BaseCoreCompo):
     def initialize(self):
         self._status_input.write(True)
 
-    def calc_compute_latency(self,payload):
-
-        return 10
+    def calc_compute_latency(self,vector_info:VectorInfo):
+        if self._config:
+            times = ceil(vector_info.vec_len / self._config.vector_width)
+            self.add_dynamic_energy(self._config.vector_energy * times)
+            return self._config.vector_latency*times
+        else:
+            return 10
 
     @registry(['_reg_head_output','finish_wire'])
     def check_stall_status(self):
@@ -75,13 +83,27 @@ class VectorUnit(BaseCoreCompo):
         if not decode_payload:
             return
 
-        memory_read_request = {'src': 'vector', 'dst': 'buffer', 'data_size': 128, 'access_type': 'read'}
+        vector_info:VectorInfo = decode_payload['data_payload']
+        input_vec_size =  ceil(vector_info.vec_len * self._config.input_precision /8) *2 # Bytes
+
+        # 暂时设计为一次读出所有的结果
+        memory_read_request = BusPayload(
+            src='vector',dst='buffer',data_size=0, # 是请求的大小,不是实际数据大小
+            payload = MemoryRequest(access_type='read',data_size=input_vec_size)
+        )
+
         self.vector_buffer.send(memory_read_request, None)
 
     @registry(['vector_buffer'])
     def execute_vector(self, payload):
-        latency = self.calc_compute_latency(self._reg_head_output.read()['data_payload'])
-        memory_write_request = {'src': 'vector', 'dst': 'buffer', 'data_size': 128, 'access_type': 'write'}
+        vector_info:VectorInfo = self._reg_head_output.read()['data_payload']
+        latency = self.calc_compute_latency(vector_info)
+
+        output_vec_size = ceil(vector_info.vec_len * self._config.input_precision / 8) # Bytes
+        memory_write_request = BusPayload(
+            src='vector',dst='buffer',data_size=output_vec_size,
+            payload = MemoryRequest(access_type='write',data_size=output_vec_size)
+        )
         f = lambda: self.vector_buffer.send(memory_write_request, self.finish_execute)
 
         self.make_event(f, self.current_time + latency)
