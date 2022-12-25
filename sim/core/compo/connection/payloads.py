@@ -1,11 +1,11 @@
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Union
 
 from sim.core.utils.payload.base import PayloadBase
 
 
 class BusPayload(PayloadBase):
-    src: str
-    dst: str
+    src: Union[str, Tuple[int, int]]
+    dst: Union[str, Tuple[int, int]]
 
     data_size: int = 0  # Bytes
     payload: Any = None
@@ -46,19 +46,27 @@ class VectorInfo(PayloadBase):
     imm: Optional[int] = None
 
 
-class TransferInfo(PayloadBase):
-    op: str
-    pc: int
-    ex: str = 'transfer'
-
+class SyncInfo(PayloadBase):
     start_core: Optional[int] = None
     end_core: Optional[int] = None
 
     state: Optional[int] = None
     core_id: Optional[int] = None
 
-    # memory part
-    pass
+
+class MemAccessInfo(PayloadBase):
+    dst_addr: int
+    src_addr: Optional[int] = None
+    data_size: int  # bytes
+
+
+class TransferInfo(PayloadBase):
+    op: str
+    pc: int
+    ex: str = 'transfer'
+
+    sync_info: Optional[SyncInfo] = None
+    mem_access_info: Optional[MemAccessInfo] = None
 
 
 class MatrixInfo(PayloadBase):
@@ -68,8 +76,17 @@ class MatrixInfo(PayloadBase):
 
     out_addr: int
     vec_addr: int
-    pe_assign: Tuple[Tuple[int,int], Tuple[int,int]]
+    pe_assign: Tuple[Tuple[int, int], Tuple[int, int]]
     relu: bool
+
+# 同步相关
+# class SyncMessage(PayloadBase):
+#     op:str
+    message:str
+    sync_cnt:Optional[int] = None
+    state:Optional[int] = None
+
+
 
 
 # 与寄存器堆产生的交互
@@ -86,5 +103,5 @@ class RegFileReadValue(PayloadBase):
 
 
 class RegFileWriteRequest(PayloadBase):
-    rd_addr:int = 0
-    rd_value:int = 0
+    rd_addr: int = 0
+    rd_value: int = 0

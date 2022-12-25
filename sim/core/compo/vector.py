@@ -88,7 +88,7 @@ class VectorUnit(BaseCoreCompo):
 
         # 暂时设计为一次读出所有的结果
         memory_read_request = BusPayload(
-            src='vector',dst='buffer',data_size=0, # 是请求的大小,不是实际数据大小
+            src='vector',dst='buffer',data_size=1, # 是请求的大小,不是实际数据大小
             payload = MemoryRequest(access_type='read',data_size=input_vec_size)
         )
 

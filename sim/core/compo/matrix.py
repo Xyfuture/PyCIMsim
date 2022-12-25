@@ -39,9 +39,10 @@ class MatrixUnit(BaseCoreCompo):
     def initialize(self):
         self._status_input.write(True)
 
-    def calc_compute_latency(self, payload):
+    def calc_compute_latency(self, matrix_info:MatrixInfo):
         if self._config:
-            self.add_dynamic_energy(self._config.matrix_energy_per_pe)
+            pe_num = matrix_info.pe_assign[1][0] * matrix_info.pe_assign[1][1]
+            self.add_dynamic_energy(self._config.matrix_energy_per_pe * pe_num)
             return self._config.matrix_latency
         else:
             return 1000
@@ -92,7 +93,7 @@ class MatrixUnit(BaseCoreCompo):
 
         # memory_read_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'read'}
         memory_read_request = BusPayload(
-            src='matrix', dst='buffer', data_size=0, # 是请求的大小
+            src='matrix', dst='buffer', data_size=1, # 是请求的大小
             payload=MemoryRequest(access_type='read', addr=matrix_info.vec_addr, data_size=input_vec_size)
         )
 

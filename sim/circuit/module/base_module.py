@@ -23,6 +23,16 @@ class BaseModule(BaseCompo):
         self._registers_dict = {}
 
         # self.registry_sensitive()
+        # 计算能耗
+        self._static_energy = 0
+        self._dynamic_energy = 0
+
+    @property
+    def total_energy(self):
+        return self._static_energy + self._dynamic_energy
+
+    def add_dynamic_energy(self, energy):
+        self._dynamic_energy += energy
 
     def registry_sensitive(self):
         for method_name in dir(self):

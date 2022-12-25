@@ -1,18 +1,17 @@
 from math import floor, ceil
 
 from sim.circuit.module.registry import registry
-from sim.config.config import CoreConfig
+from sim.config.config import CoreConfig, MemoryConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import MemoryRequest, BusPayload, MemoryReadValue
 from sim.core.compo.message_bus import MessageInterface
 
 
 class LocalBuffer(BaseCoreCompo):
-    def __init__(self, sim, config: CoreConfig = None):
+    def __init__(self, sim, config: MemoryConfig= None):
         super(LocalBuffer, self).__init__(sim)
 
-        self._core_config = config
-        self._config = config.local_buffer
+        self._config = config
 
         self.buffer_port = MessageInterface(self, "buffer")
 

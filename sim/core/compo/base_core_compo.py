@@ -10,12 +10,3 @@ class BaseCoreCompo(BaseModule):
     def __init__(self, sim):
         super(BaseCoreCompo, self).__init__(sim)
 
-        self._static_energy = 0
-        self._dynamic_energy = 0
-
-    @property
-    def total_energy(self):
-        return self._static_energy + self._dynamic_energy
-
-    def add_dynamic_energy(self,energy):
-        self._dynamic_energy += energy

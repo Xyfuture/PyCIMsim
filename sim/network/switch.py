@@ -2,6 +2,7 @@ import queue
 from sim.des.base_compo import BaseCompo
 from sim.des.base_element import BaseElement
 
+# unused 
 
 class SwitchPort(BaseElement):
     def __init__(self,compo,input_handler):

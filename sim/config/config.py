@@ -18,8 +18,8 @@ class BusConfig(BaseModel):
     bus_topology: str = 'shared'  # 'mesh'
     bus_width: int = 15  # Bytes
 
-    latency: int = 1  # cycles
-    energy: float = 1.0  # nJ
+    latency: int = 1  # cycles/hop
+    energy: float = 1.0  # nJ/hop
 
 
 class CoreConfig(BaseModel):

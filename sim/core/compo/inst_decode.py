@@ -159,30 +159,69 @@ class InstDecode(BaseCoreCompo):
                                                    'vec_len': inst['len']})
 
         elif op == 'sync':
-            decode_payload = {'pc': pc, 'ex': 'transfer', 'op': 'sync',
-                              'start_core': inst['start_core'], 'end_core': inst['end_core']}
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'sync',
+                'sync_info': SyncInfo.load_dict({'start_core': inst['start_core'], 'end_core': inst['end_core']})
+            })
         elif op == 'wait_core':
-            decode_payload = {'pc': pc, 'ex': 'transfer', 'op': 'wait_core',
-                              'state': inst['state'], 'core_id': inst['core_id']}
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'wait_core',
+                'sync_info': SyncInfo.load_dict({'state': inst['state'], 'core_id': inst['core_id']})
+            })
         elif op == 'inc_state':
-            decode_payload = {'pc': pc, 'ex': 'transfer', 'op': 'inc_state'}
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'inc_state',
+                'sync_info': SyncInfo()
+            })
 
         elif op == 'dram_to_global':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op':'dram_to_global',
+                'mem_access_info':MemAccessInfo.load_dict({
+                    'dst_addr':inst['dst_addr'],'src_addr':inst['src_addr'],'data_size':inst['data_size']})
+            })
         elif op == 'global_to_dram':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'global_to_dram',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+            })
         elif op == 'global_to_local':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'global_to_local',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+            })
         elif op == 'local_to_global':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'local_to_global',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+            })
         elif op == 'global_clr':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op':'global_clr',
+                'mem_access_info':MemAccessInfo.load_dict({
+                    'dst_addr':inst['dst_addr'], 'data_size':inst['data_size']})
+            })
         elif op == 'local_clr':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'local_clr',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': inst['dst_addr'], 'data_size': inst['data_size']})
+            })
         elif op == 'global_cpy':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'dram_to_global',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+            })
         elif op == 'local_cpy':
-            pass
+            decode_payload = TransferInfo.load_dict({
+                'pc': pc, 'ex': 'transfer', 'op': 'dram_to_global',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+            })
 
         self.id_out.write(decode_payload)
         self.jump_pc.write(jump_pc_payload)
@@ -252,7 +291,7 @@ class DecodeForward(BaseCoreCompo):
         #     else:
         #         self._map_port[port_name].write(None)
 
-        for k,v in self._map_port:
+        for k, v in self._map_port:
             v.write(None)
         if payload:
             self._map_port[payload['ex']].write(payload)

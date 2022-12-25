@@ -4,19 +4,19 @@ import queue
 from math import ceil
 from typing import Dict
 
-from sim.config.config import CoreConfig
+from sim.config.config import BusConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
+from sim.core.compo.connection.payloads import BusPayload
 from sim.des.base_element import BaseElement
 from sim.des.stime import Stime
 from sim.des.utils import fl
 
 
 class MessageBus(BaseCoreCompo):
-    def __init__(self, sim, config:CoreConfig=None):
+    def __init__(self, sim, config: BusConfig = None):
         super(MessageBus, self).__init__(sim)
 
-        self._core_config = config
-        self._config = config.local_bus
+        self._config = config
 
         self._interfaces: Dict[str, MessageInterface] = {}
         self._pend_buffer: Dict[str, queue.Queue] = {}
@@ -38,7 +38,7 @@ class MessageBus(BaseCoreCompo):
                 latency = self.calc_transfer_latency(payload)
 
                 self._interfaces[interface_id].forbid_receive()
-                self.make_event(lambda : self.transfer(payload), self.current_time + latency)
+                self.make_event(lambda: self.transfer(payload), self.current_time + latency)
 
     def transfer(self, payload):
         dst, src = payload['dst'], payload['src']
@@ -46,14 +46,21 @@ class MessageBus(BaseCoreCompo):
         self._interfaces[dst].receive(payload)
         self._interfaces[src].finish_send()
 
-    def calc_transfer_latency(self, payload):
-        data_size = payload['data_size']
+    def calc_transfer_latency(self, bus_payload: BusPayload):
+        data_size = bus_payload['data_size']
 
-        times = ceil(data_size/self._config.bus_width)
+        times = ceil(data_size / self._config.bus_width)
+
         if self._config:
-            self.add_dynamic_energy(self._config.energy * times)
-            return self._config.latency * times
-        else :
+            if self._config.bus_topology == 'shared':
+                self.add_dynamic_energy(self._config.energy * times)
+                return self._config.latency * times
+            elif self._config.bus_topology == 'mesh':
+                hops = abs(bus_payload.src[0] - bus_payload.dst[0]) +\
+                        abs(bus_payload.src[1] - bus_payload.dst[1])
+                self.add_dynamic_energy(self._config.energy * times * hops)
+                return self._config.latency * times * hops
+        else:
             return 10
 
     def __mod__(self, interface):
@@ -66,7 +73,7 @@ class MessageBus(BaseCoreCompo):
 
 
 class MessageInterface(BaseElement):
-    def __init__(self, compo, interface_id,callback=None):
+    def __init__(self, compo, interface_id, callback=None):
         super().__init__(compo)
 
         self._interface_id = interface_id
@@ -76,7 +83,7 @@ class MessageInterface(BaseElement):
 
         self._receive_callback = fl()
         if callback:
-            if isinstance(callback,list):
+            if isinstance(callback, list):
                 for f in callback:
                     self.add_callback(f)
             else:
@@ -140,11 +147,10 @@ class MessageInterface(BaseElement):
         return self._receive_ready
 
     def __mod__(self, other):
-        if isinstance(other,MessageBus):
+        if isinstance(other, MessageBus):
             other.__mod__(self)
         else:
             raise "Error Operator"
 
-    def add_callback(self,func):
+    def add_callback(self, func):
         self._receive_callback.add_func(func)
-
