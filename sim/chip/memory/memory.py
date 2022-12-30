@@ -46,12 +46,12 @@ class Memory(BaseModule):
     @registry(['memory_port'])
     def buffer_request(self, payload):
         self._request_buffer.put(payload)
-        print(f"memory {len(self._request_buffer.queue)}")
+        # print(f"memory {len(self._request_buffer.queue)}")
 
         self.handle_request()
 
-        if not self._request_buffer.full():
-            self.memory_port.allow_receive()
+        # if not self._request_buffer.full():
+        #     self.memory_port.allow_receive()
 
     def handle_request(self):
         if self._status == 'idle':  # 如果是busy就不进入

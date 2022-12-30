@@ -64,6 +64,9 @@ class InstFetch(BaseCoreCompo):
             self._pc_input.write(next_pc)
             self.if_id_port.write(inst_payload)
 
+        # if 600 < pc < self._inst_buffer_len:
+        #     self.get_running_status()
+
         if pc % 1000 == 0:
             print(pc)
 

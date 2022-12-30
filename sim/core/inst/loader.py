@@ -6,8 +6,8 @@ def load_dict(file_path):
     with open(file_path, 'r') as f:
         for line in f.readlines():
             tmp = json.loads(line)
-            if inst_filter(tmp):
-                inst.append(convert(tmp))
+            # if inst_filter(tmp):
+            inst.append(convert(tmp))
     return inst
 
 

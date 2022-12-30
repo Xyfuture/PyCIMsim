@@ -64,14 +64,15 @@ class Simulator:
                 self.flush_queue_buffer()
 
             self._event_cnt += 1
-            print(self._event_cnt)
-            if self._event_cnt == 106209:
-                print('here')
+            # print(self._event_cnt)
+            # if self._event_cnt == 40680:
+            #     print('here')
             # if self._event_cnt % 100000 == 0 :
             #     print("real time:{}".format(time.time()-st))
             #     print("cycles:{}".format(self.current_time.tick))
             #     st = time.time()
 
+        print(f"run simulate time {self.current_time}")
     def add_compo(self, compo:BaseCompo):
         if isinstance(compo, BaseCompo):
             self._compos.append(compo)
