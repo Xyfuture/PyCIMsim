@@ -13,7 +13,7 @@ from sim.des.utils import fl
 
 
 class MessageBus(BaseCoreCompo):
-    def __init__(self, sim, config: BusConfig = None):
+    def __init__(self, sim, config: BusConfig):
         super(MessageBus, self).__init__(sim)
 
         self._config = config
@@ -56,8 +56,15 @@ class MessageBus(BaseCoreCompo):
                 self.add_dynamic_energy(self._config.energy * times)
                 return self._config.latency * times
             elif self._config.bus_topology == 'mesh':
-                hops = abs(bus_payload.src[0] - bus_payload.dst[0]) +\
-                        abs(bus_payload.src[1] - bus_payload.dst[1])
+                # memory的补丁
+                if isinstance(bus_payload.src,str) or isinstance(bus_payload.dst,str):
+                    return self._config.latency * times * 10
+
+                src = (bus_payload.src/self._config.layout[1],bus_payload.src%self._config.layout[1])
+                dst = (bus_payload.dst/self._config.layout[1],bus_payload.dst%self._config.layout[1])
+
+                hops = abs(src[0] - dst[0]) +\
+                        abs(src[1] - dst[1])
                 self.add_dynamic_energy(self._config.energy * times * hops)
                 return self._config.latency * times * hops
         else:
@@ -104,7 +111,7 @@ class MessageInterface(BaseElement):
     #     self._receive_callback(payload)
 
     def send(self, payload, callback):
-        assert 'dst' in payload and 'data_size' in payload
+        # assert 'dst' in payload and 'data_size' in payload
         payload['src'] = self._interface_id
 
         self._send_payload_queue.put(payload)
@@ -123,8 +130,12 @@ class MessageInterface(BaseElement):
         self._receive_ready = False
 
     def allow_receive(self):
-        self._receive_ready = True
-        self._bus.receiver_issue_request(self._interface_id)
+        self.make_event(self._allow_receive,self.current_time+1)
+
+    def _allow_receive(self):
+        if not self._receive_ready:
+            self._receive_ready = True
+            self._bus.receiver_issue_request(self._interface_id)
 
     def finish_send(self):
         self._send_ready = True

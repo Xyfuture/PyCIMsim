@@ -2,6 +2,7 @@ from sim.circuit.module.registry import registry
 # from sim.circuit.port.port import UniReadPort, UniWritePort
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegNext
+from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import ScalarInfo
 from sim.des.simulator import Simulator
@@ -11,8 +12,9 @@ from sim.des.stime import Stime
 
 
 class ScalarUnit(BaseCoreCompo):
-    def __init__(self, sim):
+    def __init__(self, sim,config:CoreConfig):
         super(ScalarUnit, self).__init__(sim)
+        self._config = config
 
         self.id_scalar_port = InWire(UniWire, self)
         self.reg_file_write = OutWire(UniWire, self)

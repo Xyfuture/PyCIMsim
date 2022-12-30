@@ -2,6 +2,7 @@ from sim.circuit.module.registry import registry
 # from sim.circuit.port.port import UniWritePort, UniReadPort
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.circuit.register.register import RegEnable
+from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import *
 from sim.des.simulator import Simulator
@@ -15,12 +16,13 @@ from sim.des.utils import fl
 class InstDecode(BaseCoreCompo):
     matrix_inst = {'gemv'}
     vector_inst = {'vmax', 'vadd', 'vsub', 'vmul', 'vmului', 'vact'}
-    transfer_inst = {'sync', 'wait_core', 'inc_state',
-                     'dram_to_global', 'global_to_dram', 'global_to_local',
+    sync_inst = {'sync', 'wait_core', 'inc_state'}
+    memory_inst = {'dram_to_global', 'global_to_dram', 'global_to_local',
                      'global_clr', 'global_cpy', 'local_clr', 'local_cpy'}
 
-    def __init__(self, sim):
+    def __init__(self, sim, config: CoreConfig):
         super(InstDecode, self).__init__(sim)
+        self._config = config
 
         self._reg = RegEnable(self)
 
@@ -52,6 +54,10 @@ class InstDecode(BaseCoreCompo):
 
     @registry(['_reg_output'])
     def read_register(self):
+        # 64bit指令不需要读寄存器
+        if not self._config.use_32bit_inst:
+            return
+
         inst_payload = self._reg_output.read()
 
         reg_read_payload = {'rd_addr': 0, 'rs1_addr': 0, 'rs2_addr': 0}
@@ -77,10 +83,28 @@ class InstDecode(BaseCoreCompo):
             return
         inst, pc = if_payload['inst'], if_payload['pc']
 
-        reg_payload = self.reg_file_read_data.read()
         rd_data, rs1_data, rs2_data = 0, 0, 0
-        if reg_payload:
-            rd_data, rs1_data, rs2_data = reg_payload['rd_data'], reg_payload['rs1_data'], reg_payload['rs2_data']
+        # 对于32 bit 指令需要读取寄存器
+        if self._config.use_32bit_inst:
+            reg_payload = self.reg_file_read_data.read()
+            if reg_payload:
+                rd_data, rs1_data, rs2_data = reg_payload['rd_data'], reg_payload['rs1_data'], reg_payload['rs2_data']
+        else:
+            # 使用64bit 指令, 需要额外的转换
+            op = inst['op']
+            if op in self.vector_inst:
+                rd_data = inst['out_addr']
+                rs1_data = inst['in1_addr']
+                if op != 'vmului' and op != 'vact':
+                    rs2_data = inst['in2_addr']
+            elif op in self.memory_inst:
+                rd_data = inst['dst_addr']
+
+                if op != 'global_clr' and op != 'local_clr':
+                    rs1_data = inst['src_addr']
+            elif op in self.matrix_inst:
+                rd_data = inst['out_addr']
+                rs1_data = inst['vec_addr']
 
         # 没有信息时为None
         jump_pc_payload = None
@@ -176,51 +200,51 @@ class InstDecode(BaseCoreCompo):
 
         elif op == 'dram_to_global':
             decode_payload = TransferInfo.load_dict({
-                'pc': pc, 'ex': 'transfer', 'op':'dram_to_global',
-                'mem_access_info':MemAccessInfo.load_dict({
-                    'dst_addr':inst['dst_addr'],'src_addr':inst['src_addr'],'data_size':inst['data_size']})
+                'pc': pc, 'ex': 'transfer', 'op': 'dram_to_global',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': rd_data, 'src_addr': rs1_data, 'data_size': inst['data_size']})
             })
         elif op == 'global_to_dram':
             decode_payload = TransferInfo.load_dict({
                 'pc': pc, 'ex': 'transfer', 'op': 'global_to_dram',
                 'mem_access_info': MemAccessInfo.load_dict({
-                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+                    'dst_addr': rd_data, 'src_addr': rs1_data, 'data_size': inst['data_size']})
             })
         elif op == 'global_to_local':
             decode_payload = TransferInfo.load_dict({
                 'pc': pc, 'ex': 'transfer', 'op': 'global_to_local',
                 'mem_access_info': MemAccessInfo.load_dict({
-                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+                    'dst_addr': rd_data, 'src_addr': rs1_data, 'data_size': inst['data_size']})
             })
         elif op == 'local_to_global':
             decode_payload = TransferInfo.load_dict({
                 'pc': pc, 'ex': 'transfer', 'op': 'local_to_global',
                 'mem_access_info': MemAccessInfo.load_dict({
-                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+                    'dst_addr': rd_data, 'src_addr': rs1_data, 'data_size': inst['data_size']})
             })
         elif op == 'global_clr':
             decode_payload = TransferInfo.load_dict({
-                'pc': pc, 'ex': 'transfer', 'op':'global_clr',
-                'mem_access_info':MemAccessInfo.load_dict({
-                    'dst_addr':inst['dst_addr'], 'data_size':inst['data_size']})
+                'pc': pc, 'ex': 'transfer', 'op': 'global_clr',
+                'mem_access_info': MemAccessInfo.load_dict({
+                    'dst_addr': rd_data, 'data_size': inst['data_size']})
             })
         elif op == 'local_clr':
             decode_payload = TransferInfo.load_dict({
                 'pc': pc, 'ex': 'transfer', 'op': 'local_clr',
                 'mem_access_info': MemAccessInfo.load_dict({
-                    'dst_addr': inst['dst_addr'], 'data_size': inst['data_size']})
+                    'dst_addr': rd_data, 'data_size': inst['data_size']})
             })
         elif op == 'global_cpy':
             decode_payload = TransferInfo.load_dict({
                 'pc': pc, 'ex': 'transfer', 'op': 'dram_to_global',
                 'mem_access_info': MemAccessInfo.load_dict({
-                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+                    'dst_addr': rd_data, 'src_addr': rs1_data, 'data_size': inst['data_size']})
             })
         elif op == 'local_cpy':
             decode_payload = TransferInfo.load_dict({
                 'pc': pc, 'ex': 'transfer', 'op': 'dram_to_global',
                 'mem_access_info': MemAccessInfo.load_dict({
-                    'dst_addr': inst['dst_addr'], 'src_addr': inst['src_addr'], 'data_size': inst['data_size']})
+                    'dst_addr': rd_data, 'src_addr': rs1_data, 'data_size': inst['data_size']})
             })
 
         self.id_out.write(decode_payload)
@@ -291,7 +315,7 @@ class DecodeForward(BaseCoreCompo):
         #     else:
         #         self._map_port[port_name].write(None)
 
-        for k, v in self._map_port:
+        for k, v in self._map_port.items():
             v.write(None)
         if payload:
             self._map_port[payload['ex']].write(payload)

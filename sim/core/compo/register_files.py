@@ -5,6 +5,7 @@ from sim.circuit.module.registry import registry
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 
 from sim.circuit.register.register import RegNext
+from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import RegFileReadRequest
 from sim.des.simulator import Simulator
@@ -16,8 +17,9 @@ from sim.des.utils import fl
 
 
 class RegisterFiles(BaseCoreCompo):
-    def __init__(self, sim):
+    def __init__(self, sim,config:CoreConfig):
         super(RegisterFiles, self).__init__(sim)
+        self._config = config
 
         self.reg_file_read_addr = InWire(UniWire, self)
         self.reg_file_read_data = OutWire(UniWire, self)

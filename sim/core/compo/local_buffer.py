@@ -8,7 +8,7 @@ from sim.core.compo.message_bus import MessageInterface
 
 
 class LocalBuffer(BaseCoreCompo):
-    def __init__(self, sim, config: MemoryConfig= None):
+    def __init__(self, sim, config: MemoryConfig):
         super(LocalBuffer, self).__init__(sim)
 
         self._config = config

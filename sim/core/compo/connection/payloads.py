@@ -4,8 +4,8 @@ from sim.core.utils.payload.base import PayloadBase
 
 
 class BusPayload(PayloadBase):
-    src: Union[str, Tuple[int, int]]
-    dst: Union[str, Tuple[int, int]]
+    src: Union[str, int]
+    dst: Union[str, int]
 
     data_size: int = 0  # Bytes
     payload: Any = None
@@ -20,7 +20,7 @@ class MemoryRequest(PayloadBase):
 
 # 读内存时返回的结果
 class MemoryReadValue(PayloadBase):
-    pass
+    data: Optional[Any] = None
 
 
 class ScalarInfo(PayloadBase):
@@ -79,13 +79,6 @@ class MatrixInfo(PayloadBase):
     pe_assign: Tuple[Tuple[int, int], Tuple[int, int]]
     relu: bool
 
-# 同步相关
-# class SyncMessage(PayloadBase):
-#     op:str
-    message:str
-    sync_cnt:Optional[int] = None
-    state:Optional[int] = None
-
 
 
 
@@ -105,3 +98,12 @@ class RegFileReadValue(PayloadBase):
 class RegFileWriteRequest(PayloadBase):
     rd_addr: int = 0
     rd_value: int = 0
+
+
+# 同步时Sync指令传输的信息
+class SyncMessage(PayloadBase):
+    op: str
+    message: str
+
+    sync_cnt: Optional[int] = None  # for op == 'sync'
+    state: Optional[int] = None  # for op == 'wait_core'

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 from pydantic import BaseModel
 
@@ -21,6 +21,8 @@ class BusConfig(BaseModel):
     latency: int = 1  # cycles/hop
     energy: float = 1.0  # nJ/hop
 
+    layout: Optional[Tuple[int, int]] = None
+
 
 class CoreConfig(BaseModel):
     # precision setting
@@ -31,8 +33,8 @@ class CoreConfig(BaseModel):
     matrix_latency: int = 1000  # cycles
     matrix_energy_per_pe: float = 1.0  # nJ
     device_precision: int = 2  # bits
-    xbar_size:Tuple[int,int] = (128,128)
-    pe_layout:Tuple[int,int] = (32,8)
+    xbar_size: Tuple[int, int] = (128, 128)
+    pe_layout: Tuple[int, int] = (32, 8)
 
     # vector unit
     vector_width: int = 32  # alus per vector unit
@@ -51,12 +53,16 @@ class CoreConfig(BaseModel):
 
     transfer_energy: float = 1.0
 
+    # mode
+    use_32bit_inst: bool = False
+
 
 class ChipConfig(BaseModel):
     core_config: CoreConfig = CoreConfig()
-    core_layout: Tuple[2] = (8, 8)
+    core_layout: Tuple[int, int] = (16, 16)
+    core_cnt: int = 256
 
-    noc_bus: BusConfig = BusConfig()
+    noc_bus: BusConfig = BusConfig(layout=core_layout)
 
     global_memory: MemoryConfig = MemoryConfig()
     offchip_memory: MemoryConfig = MemoryConfig()

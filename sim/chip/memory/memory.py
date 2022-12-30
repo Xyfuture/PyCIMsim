@@ -46,6 +46,7 @@ class Memory(BaseModule):
     @registry(['memory_port'])
     def buffer_request(self, payload):
         self._request_buffer.put(payload)
+        print(f"memory {len(self._request_buffer.queue)}")
 
         self.handle_request()
 

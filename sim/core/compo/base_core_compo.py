@@ -10,3 +10,5 @@ class BaseCoreCompo(BaseModule):
     def __init__(self, sim):
         super(BaseCoreCompo, self).__init__(sim)
 
+    def get_running_status(self):
+        pass

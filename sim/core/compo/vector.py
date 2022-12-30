@@ -11,7 +11,7 @@ from sim.core.compo.message_bus import MessageInterface
 
 
 class VectorUnit(BaseCoreCompo):
-    def __init__(self,sim,config:CoreConfig=None):
+    def __init__(self,sim,config:CoreConfig):
         super(VectorUnit, self).__init__(sim)
 
         self._config = config

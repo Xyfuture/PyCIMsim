@@ -13,7 +13,7 @@ from sim.core.compo.message_bus import MessageInterface
 
 
 class MatrixUnit(BaseCoreCompo):
-    def __init__(self, sim, config: CoreConfig = None):
+    def __init__(self, sim, config: CoreConfig):
         super(MatrixUnit, self).__init__(sim)
         self._config = config
 

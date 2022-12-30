@@ -1,3 +1,4 @@
+from sim.config.config import CoreConfig
 from sim.core.compo.local_buffer import LocalBuffer
 from sim.core.compo.matrix import MatrixUnit
 from sim.core.compo.message_bus import MessageBus
@@ -9,29 +10,30 @@ from sim.core.compo.inst_decode import InstDecode, DecodeForward
 from sim.core.compo.register_files import RegisterFiles
 from sim.core.compo.scalar import ScalarUnit
 from sim.core.compo.controller import Controller
+from sim.network.simple.switch import Network
 
 
 class Core(BaseCompo):
-    def __init__(self,sim,inst_buffer,core_id,noc,config=None):
+    def __init__(self,sim,core_id,noc:Network,config:CoreConfig,inst_buffer=None):
         super(Core, self).__init__(sim)
 
         self._config = config
-        self._inst_buffer = inst_buffer
+        self._inst_buffer = None
         self.core_id = core_id
 
-        self.inst_fetch = InstFetch(sim)
-        self.inst_decode = InstDecode(sim)
+        self.inst_fetch = InstFetch(sim,self._config)
+        self.inst_decode = InstDecode(sim,self._config)
         self.forward = DecodeForward(sim)
         self.ctrl = Controller(sim)
-        self.reg_file = RegisterFiles(sim)
+        self.reg_file = RegisterFiles(sim,self._config)
 
-        self.scalar = ScalarUnit(sim)
+        self.scalar = ScalarUnit(sim,self._config)
         self.vector = VectorUnit(sim,self._config)
         self.matrix = MatrixUnit(sim,self._config)
         self.transfer = TransferUnit(sim,self.core_id,self._config)
 
-        self.bus = MessageBus(sim,self._config)
-        self.buffer = LocalBuffer(sim,self._config)
+        self.bus = MessageBus(sim,self._config.local_bus)
+        self.buffer = LocalBuffer(sim,self._config.local_buffer)
 
         self.inst_fetch // self.inst_decode
         self.inst_fetch // self.ctrl
@@ -58,7 +60,13 @@ class Core(BaseCompo):
 
         self.transfer.noc_interface % noc
 
-        self.inst_fetch.set_inst_buffer(self._inst_buffer)
+        if inst_buffer:
+            self._inst_buffer = inst_buffer
+            self.inst_fetch.set_inst_buffer(self._inst_buffer)
 
     def initialize(self):
         pass
+
+    def set_inst_buffer(self,inst_buffer):
+        self._inst_buffer = inst_buffer
+        self.inst_fetch.set_inst_buffer(self._inst_buffer)
