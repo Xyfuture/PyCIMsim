@@ -11,7 +11,7 @@ class FunctionList:
             if callable(f):
                 self._func_list.append(f)
 
-    def __call__(self,*args):
+    def __call__(self, *args):
         for f in self._func_list:
             f(*args)
 

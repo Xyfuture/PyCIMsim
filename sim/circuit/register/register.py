@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from sim.circuit.port.channel import UniChannel
 from sim.circuit.register.base_register import BaseRegister
-# from sim.circuit.port.port import UniReadPort, UniWritePort, UniPulseReadPort, UniPulseWritePort
 from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
 from sim.des.base_compo import BaseCompo
 from sim.des.stime import Stime
@@ -10,22 +8,28 @@ from sim.des.utils import fl
 
 
 class RegNext(BaseRegister):
-    def __init__(self, compo):
-        super(RegNext, self).__init__(compo)
+    '''
+    普通的寄存器，当输入数据有变化时，下个周期数据变化
+    不带enable端口
+    '''
+
+    def __init__(self, sim, compo):
+        super(RegNext, self).__init__(sim, compo)
 
         self._payload = None
         self._update_time = None
 
         self._next_run_time = Stime(0, 0)
 
-        self._input_wire = InWire(UniWire,compo)
-        self._input_wire.add_callback(self.process_input)
-        self._output_wire = OutWire(UniWire,compo)
+        # self._input_wire = InWire(UniWire, sim, self)
+        # self._input_wire.add_callback(self.process_input)
+        # self._output_wire = OutWire(UniWire, sim, self)
 
-        # self._input_write_port = None
-        # self._output_read_port = None
+        # 想修改回只用一条线的模式
+        self._input_wire = None
+        self._output_wire = None
 
-    def initialize(self, payload):
+    def init(self, payload):
         self._payload = payload
         self._update_time = self.current_time
 
@@ -55,50 +59,42 @@ class RegNext(BaseRegister):
             return True
         return False
 
-    def connect(self,input_wire:UniWire,output_wire:UniWire):
-        self._input_wire << input_wire
-        self._output_wire >> output_wire
+    def connect(self, input_wire: UniWire, output_wire: UniWire):
+        # self._input_wire << input_wire
+        # self._output_wire >> output_wire
 
-    # def get_input_read_port(self):
-    #     return self._input_wire
-    #
-    # def get_input_write_port(self):
-    #     self._input_write_port = UniWritePort(self._compo)
-    #     self._input_write_port // self._input_wire
-    #
-    #     return self._input_write_port
-    #
-    # def get_output_read_port(self):
-    #     self._output_read_port = UniReadPort(self._compo)
-    #     self._output_wire // self._output_read_port
-    #
-    #     return self._output_read_port
-    #
-    # def get_output_write_port(self):
-    #     return self._output_wire
+        self._input_wire = input_wire
+        self._output_wire = output_wire
+
+        self._input_wire.add_callback(self.process_input)
 
 
 class RegEnable(BaseRegister):
-    def __init__(self, compo: BaseCompo):
-        super(RegEnable, self).__init__(compo)
+    '''
+    基于RegNext，但是支持enable端口，可以打开关闭
+    '''
+
+    def __init__(self, sim, compo: BaseCompo):
+        super(RegEnable, self).__init__(sim, compo)
 
         self._payload = None
+        self._enable_payload = None
         self._update_time = None
 
         self._next_run_time = Stime(0, 0)
 
-        self._input_wire = InWire(UniWire,compo)
-        self._input_wire.add_callback(self.process_input)
-        self._output_wire = OutWire(UniWire,compo)
+        # self._input_wire = InWire(UniWire, sim, self)
+        # self._input_wire.add_callback(self.process_input)
+        # self._output_wire = OutWire(UniWire, sim, self)
+        #
+        # self._enable_wire = InWire(UniWire, sim, self)
+        # self._enable_wire.add_callback(self.process_enable)
 
-        self._enable_wire = InWire(UniWire,compo)
-        self._enable_wire.add_callback(self.process_enable)
+        self._input_wire = None
+        self._output_wire = None
+        self._enable_wire = None
 
-        # self._enable_write_port = None
-        # self._output_read_port = None
-        # self._input_write_port = None
-
-    def initialize(self, payload):
+    def init(self, payload):
         self._payload = payload
         self._update_time = self.current_time
 
@@ -112,6 +108,7 @@ class RegEnable(BaseRegister):
 
     def process_input(self):
         if self._input_wire.read() != self._payload:
+
             self.run_next()
 
     def process_enable(self):
@@ -131,59 +128,39 @@ class RegEnable(BaseRegister):
             return True
         return False
 
-    def connect(self,input_wire:UniWire,enable_wire:UniWire,output_wire:UniWire):
-        self._input_wire << input_wire
-        self._output_wire >> output_wire
-        self._enable_wire << enable_wire
+    def connect(self, input_wire: UniWire, enable_wire: UniWire, output_wire: UniWire):
+        # self._input_wire << input_wire
+        # self._output_wire >> output_wire
+        # self._enable_wire << enable_wire
 
-    # def get_input_read_port(self):
-    #     return self._input_wire
-    #
-    # def get_input_write_port(self):
-    #     self._input_write_port = UniWritePort(self._compo)
-    #     self._input_write_port // self._input_wire
-    #
-    #     return self._input_write_port
-    #
-    # def get_output_read_port(self):
-    #     self._output_read_port = UniReadPort(self._compo)
-    #     self._output_wire // self._output_read_port
-    #
-    #     return self._output_read_port
-    #
-    # def get_output_write_port(self):
-    #     return self._output_wire
-    #
-    # def get_enable_read_port(self):
-    #     return self._enable_wire
-    #
-    # def get_enable_write_port(self):
-    #     self._enable_write_port = UniWritePort(self._compo)
-    #     self._enable_write_port // self._enable_wire
-    #
-    #     return self._enable_write_port
+        self._input_wire = input_wire
+        self._output_wire = output_wire
+        self._enable_wire = enable_wire
+
+        self._input_wire.add_callback(self.process_input)
+        self._enable_wire.add_callback(self.process_enable)
 
 
 class Trigger(BaseRegister):
-    def __init__(self,compo):
-        super(Trigger, self).__init__(compo)
+    def __init__(self, sim, compo):
+        super(Trigger, self).__init__(sim, compo)
         self._next_status = False
 
         self._payload = None
         self._update_time = None
 
-        self._next_run_time = Stime(0,0)
+        self._next_run_time = Stime(0, 0)
 
-        self._input_wire = InWire(UniPulseWire,compo)
-        self._input_wire.add_callback(self.process_input)
+        # self._input_wire = InWire(UniPulseWire, sim, self)
+        # self._input_wire.add_callback(self.process_input)
 
-        # self._input_write_port = None
+        self._input_wire = None
 
         self._callbacks = fl()
 
     def pulse(self):
         if self._payload:
-            self.make_event(self._callbacks,self.next_handle_epsilon)
+            self.make_event(self._callbacks, self.next_handle_epsilon)
 
     def process_input(self):
         self._payload = self._input_wire.read()
@@ -202,17 +179,10 @@ class Trigger(BaseRegister):
             return True
         return False
 
-    def add_callback(self,func):
+    def add_callback(self, func):
         self._callbacks.add_func(func)
 
-    def connect(self,input_wire:UniWire):
-        self._input_wire << input_wire
-
-    # def get_input_read_port(self):
-    #     return self._input_wire
-    #
-    # def get_input_write_port(self):
-    #     self._input_write_port = UniPulseWritePort(self._compo)
-    #     self._input_write_port // self._input_wire
-    #     return self._input_write_port
-
+    def connect(self, input_wire: UniWire):
+        # self._input_wire << input_wire
+        self._input_wire = input_wire
+        self._input_wire.add_callback(self.process_input)

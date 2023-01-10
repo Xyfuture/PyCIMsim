@@ -34,12 +34,11 @@ class Stime:
         return not self.__gt__(other)
 
     def __add__(self, other):
-        if isinstance(other,int):
-            return Stime(self._tick + other, 0) # set new epsilon to zero
-        elif isinstance(other,tuple):
+        if isinstance(other, int):
+            return Stime(self._tick + other, 0)  # set new epsilon to zero
+        elif isinstance(other, tuple):
             return Stime(self._tick + other[0], self._epsilon + other[1])
         return None
 
-
     def __str__(self):
-        return "tick:{} epsilon:{}".format(self._tick,self._epsilon)
+        return "tick:{} epsilon:{}".format(self._tick, self._epsilon)

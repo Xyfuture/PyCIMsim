@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 from sim.circuit.register.base_register import BaseRegister
-from sim.circuit.port.base_port import BasePort
-from sim.circuit.port.port import UniReadPort, UniWritePort, UniWire
+
 from sim.circuit.wire.base_wire import BaseWire
 from sim.des.base_compo import BaseCompo
-from sim.des.event import Event
-from sim.des.base_element import BaseElement
-from sim.des.stime import Stime
-from sim.des.utils import fl
 
 
 class BaseModule(BaseCompo):
-    def __init__(self, sim):
-        super(BaseModule, self).__init__(sim)
+    def __init__(self, sim, compo):
+        super(BaseModule, self).__init__(sim,compo)
 
         self._input_wires_dict = {}
         self._output_wires_dict = {}
@@ -36,12 +31,12 @@ class BaseModule(BaseCompo):
 
     def registry_sensitive(self):
         for method_name in dir(self):
-            method = getattr(self,method_name)
+            method = getattr(self, method_name)
             if callable(method) and hasattr(method, '_sensitive_list'):
                 sen_list = method._sensitive_list
                 # method = self.__dict__[method_name].__get__(None, self)
                 for port_name in sen_list:
-                    port = getattr(self,port_name)
+                    port = getattr(self, port_name)
                     port.add_callback(method)
 
     def __setattr__(self, key, value):

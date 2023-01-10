@@ -74,7 +74,7 @@ class InstFetch(BaseCoreCompo):
         #     self.get_running_status()
 
     def initialize(self):
-        self._pc_reg.initialize(10)
+        self._pc_reg.init(10)
 
         self.if_stall.write(False)
         self._pc_input.write(0)

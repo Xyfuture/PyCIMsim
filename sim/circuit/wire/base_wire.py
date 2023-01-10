@@ -1,9 +1,9 @@
-from sim.des.base_element import BaseElement
+from sim.des.base_compo import BaseCompo
 
 
-class BaseWire(BaseElement):
-    def __init__(self, compo):
-        super(BaseWire, self).__init__(compo)
+class BaseWire(BaseCompo):
+    def __init__(self, sim, compo):
+        super(BaseWire, self).__init__(sim,compo)
 
     @property
     def readable(self):
@@ -19,6 +19,7 @@ class BaseWire(BaseElement):
             if self.readable:
                 return True
         return False
+
     @property
     def as_output(self):
         if self.as_io_wire:
@@ -29,3 +30,6 @@ class BaseWire(BaseElement):
     @property
     def as_io_wire(self):
         return False
+
+    def channel_callback(self):
+        pass
