@@ -50,7 +50,7 @@ class MatrixUnit(BaseCoreCompo):
     @registry(['_reg_head_output', 'finish_wire'])
     def check_stall_status(self):
         reg_head_payload = self._reg_head_output.read()
-        finish_info = self.finish_wire.read()
+        finish_info = self. finish_wire.read()
 
         data_payload, idle = reg_head_payload['data_payload'], reg_head_payload['status']
 
