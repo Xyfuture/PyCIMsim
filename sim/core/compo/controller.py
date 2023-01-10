@@ -8,24 +8,22 @@ from sim.des.base_compo import BaseCompo
 from sim.des.stime import Stime
 
 
-
-
 class Controller(BaseCoreCompo):
-    def __init__(self,sim):
-        super().__init__(sim)
+    def __init__(self, sim, compo):
+        super().__init__(sim, compo)
 
-        self.if_stall = InWire(UniWire,self)
-        self.id_stall = InWire(UniWire,self)
+        self.if_stall = InWire(UniWire, sim, self)
+        self.id_stall = InWire(UniWire, sim, self)
 
-        self.if_enable = OutWire(UniWire,self)
-        self.id_enable = OutWire(UniWire,self)
+        self.if_enable = OutWire(UniWire, sim, self)
+        self.id_enable = OutWire(UniWire, sim, self)
 
         self.registry_sensitive()
 
     def initialize(self):
         pass
 
-    @registry(['if_stall','id_stall'])
+    @registry(['if_stall', 'id_stall'])
     def process(self):
 
         if_status = self.if_stall.read()
@@ -37,6 +35,6 @@ class Controller(BaseCoreCompo):
         elif if_status:
             self.if_enable.write(False)
             self.id_enable.write(True)
-        else :
+        else:
             self.if_enable.write(True)
             self.id_enable.write(True)

@@ -1,45 +1,56 @@
 from math import ceil
+from typing import Optional
 
-from sim.circuit.module.basic_modules import RegSustain
+from sim.circuit.hybrid.trigger import Trigger
 from sim.circuit.module.registry import registry
-# from sim.circuit.port.port import UniReadPort, UniWritePort, UniPulseWire
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
-from sim.circuit.register.register import RegNext, Trigger
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
+from sim.circuit.register.register import RegNext
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
-from sim.core.compo.connection.payloads import MatrixInfo, MemoryRequest, MemoryReadValue, BusPayload
+from sim.core.compo.connection.payloads import MatrixInfo, MemoryRequest, BusPayload
 
 from sim.core.compo.message_bus import MessageInterface
+from sim.core.utils.payload.base import PayloadBase
+
+
+class MatrixFSMPayload(PayloadBase):
+    matrix_info: Optional[MatrixInfo] = None
+    status: Optional[str] = None  # idle or busy or finish(just finish)
 
 
 class MatrixUnit(BaseCoreCompo):
-    def __init__(self, sim, config: CoreConfig):
-        super(MatrixUnit, self).__init__(sim)
+    def __init__(self, sim, compo, config: CoreConfig):
+        super(MatrixUnit, self).__init__(sim, compo)
         self._config = config
 
-        self.id_matrix_port = InWire(UniWire, self)
+        self.id_matrix_port = InWire(UniWire, sim, self)
 
-        self._reg_head = RegSustain(sim)
-        self._status_input = UniWire(self)
-        self._reg_head_output = UniWire(self)
-        self._reg_head.connect(self.id_matrix_port, self._status_input, self._reg_head_output)
+        # self._reg_head = RegSustain(sim)
+        # self._status_input = UniWire(self)
+        # self._reg_head_output = UniWire(self)
+        # self._reg_head.connect(self.id_matrix_port, self._status_input, self._reg_head_output)
 
-        self.matrix_buffer = MessageInterface(self, 'matrix')
+        self._fsm_reg = RegNext(sim, self)
+        self._fsm_reg_input = UniWire(sim, self)
+        self._fsm_reg_output = UniWire(sim, self)
+        self._fsm_reg.connect(self._fsm_reg_input, self._fsm_reg_output)
 
-        self.matrix_busy = OutWire(UniWire, self)
+        self.matrix_buffer = MessageInterface(sim, self, 'matrix')
 
-        self.finish_wire = UniPulseWire(self)
+        self.matrix_busy = OutWire(UniWire, sim, self)
 
-        self.func_trigger = Trigger(self)
-        self.trigger_input = UniPulseWire(self)
-        self.func_trigger.connect(self.trigger_input)
+        self._finish_wire = UniWire(sim, self)
+
+        self.func_trigger = Trigger(sim, self)
 
         self.registry_sensitive()
 
     def initialize(self):
-        self._status_input.write(True)
+        self._fsm_reg.init(MatrixFSMPayload(
+            matrix_info=None, status='idle'
+        ))
 
-    def calc_compute_latency(self, matrix_info:MatrixInfo):
+    def calc_compute_latency(self, matrix_info: MatrixInfo):
         if self._config:
             pe_num = matrix_info.pe_assign[1][0] * matrix_info.pe_assign[1][1]
             self.add_dynamic_energy(self._config.matrix_energy_per_pe * pe_num)
@@ -47,45 +58,62 @@ class MatrixUnit(BaseCoreCompo):
         else:
             return 1000
 
-    @registry(['_reg_head_output', 'finish_wire'])
-    def check_stall_status(self):
-        reg_head_payload = self._reg_head_output.read()
-        finish_info = self. finish_wire.read()
+    @registry(['_fsm_reg_output', '_finish_wire', 'id_matrix_port'])
+    def gen_fsm_input(self):
+        fsm_payload: MatrixFSMPayload = self._fsm_reg_output.read()
+        old_matrix_info, status = fsm_payload.matrix_info, fsm_payload.status
 
-        data_payload, idle = reg_head_payload['data_payload'], reg_head_payload['status']
+        finish_info = self._finish_wire.read()
 
-        new_idle_status = True
-        trigger_status = False
-        stall_status = False
+        new_matrix_info: MatrixInfo = self.id_matrix_port.read()
 
-        if idle:
-            if data_payload:
-                if data_payload['ex'] == 'matrix':
-                    new_idle_status = False
-                    trigger_status = True
-                    stall_status = True
-        else:
-            if finish_info:
-                new_idle_status = True
-                trigger_status = False
-                stall_status = False
+        new_fsm_payload = None
+        if status == 'idle':
+            if new_matrix_info:
+                new_fsm_payload = MatrixFSMPayload(
+                    status='busy', matrix_info=new_matrix_info
+                )
+        elif status == 'finish':
+            if new_matrix_info:
+                new_fsm_payload = MatrixFSMPayload(
+                    status='busy', matrix_info=new_matrix_info
+                )
             else:
-                new_idle_status = False
-                trigger_status = False
-                stall_status = True
+                new_fsm_payload = MatrixFSMPayload(status='idle')
+        elif status == 'busy':
+            if finish_info:  # True for finish work
+                new_fsm_payload = MatrixFSMPayload(status='finish')
+        else:
+            assert False
 
-        self._status_input.write(new_idle_status)
-        self.trigger_input.write(trigger_status)
-        self.matrix_busy.write(stall_status)
+        # 输出到状态机的寄存器中，如果没变化不输出（没实现__eq__,不确定比较结果）
+        if new_fsm_payload:
+            self._fsm_reg_input.write(new_fsm_payload)
+
+    @registry(['_fsm_reg_output'])
+    def process_fsm_output(self):
+        fsm_payload = self._fsm_reg_output.read()
+        matrix_info, status = fsm_payload.matrix_info, fsm_payload.status
+
+        stall_status = False
+        if status == 'idle':
+            pass
+        elif status == 'finish':
+            stall_status = False
+            self.matrix_busy.write(stall_status)
+            self._finish_wire.write(False)  # 手动关闭
+        elif status == 'busy':
+            stall_status = True
+            self.func_trigger.set()
+            self.matrix_busy.write(stall_status)
+        else:
+            assert False
+        # 暂时较为简陋
 
     @registry(['func_trigger'])
     def process(self):
-        decode_payload = self._reg_head_output.read()
-
-        if not decode_payload:
-            return
-
-        matrix_info: MatrixInfo = decode_payload['data_payload']
+        fsm_payload = self._fsm_reg_output.read()
+        matrix_info: MatrixInfo = fsm_payload.matrix_info
 
         # 计算需要的数据量
         input_vec_size = ceil(matrix_info.pe_assign[1][0] * self._config.xbar_size[0]
@@ -93,7 +121,7 @@ class MatrixUnit(BaseCoreCompo):
 
         # memory_read_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'read'}
         memory_read_request = BusPayload(
-            src='matrix', dst='buffer', data_size=1, # 是请求的大小
+            src='matrix', dst='buffer', data_size=1,  # 是请求的大小
             payload=MemoryRequest(access_type='read', addr=matrix_info.vec_addr, data_size=input_vec_size)
         )
 
@@ -101,7 +129,8 @@ class MatrixUnit(BaseCoreCompo):
 
     @registry(['matrix_buffer'])
     def execute_gemv(self, payload):
-        matrix_info: MatrixInfo = self._reg_head_output.read()['data_payload']
+        matrix_info: MatrixInfo = self._fsm_reg_output.read().matrix_info
+
         output_vec_size = ceil(matrix_info.pe_assign[1][1] * self._config.xbar_size[1] * self._config.device_precision
                                * (self._config.input_precision / 8) / self._config.weight_precision)  # Bytes
 
@@ -118,7 +147,6 @@ class MatrixUnit(BaseCoreCompo):
         self.make_event(f, self.current_time + latency)
 
     def finish_execute(self):
-        # print("finish gemv time:{}".format(self.current_time))
 
         self.matrix_buffer.allow_receive()
-        self.finish_wire.write(True)
+        self._finish_wire.write(True)

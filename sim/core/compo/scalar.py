@@ -1,27 +1,22 @@
 from sim.circuit.module.registry import registry
-# from sim.circuit.port.port import UniReadPort, UniWritePort
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
 from sim.circuit.register.register import RegNext
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import ScalarInfo
-from sim.des.simulator import Simulator
-from sim.des.event import Event
-from sim.des.base_compo import BaseCompo
-from sim.des.stime import Stime
 
 
 class ScalarUnit(BaseCoreCompo):
-    def __init__(self, sim,config:CoreConfig):
-        super(ScalarUnit, self).__init__(sim)
+    def __init__(self, sim, compo, config: CoreConfig):
+        super(ScalarUnit, self).__init__(sim, compo)
         self._config = config
 
-        self.id_scalar_port = InWire(UniWire, self)
-        self.reg_file_write = OutWire(UniWire, self)
+        self.id_scalar_port = InWire(UniWire, sim, self)
+        self.reg_file_write = OutWire(UniWire, sim, self)
 
-        self._reg = RegNext(self)
-        self._reg_input = UniWire(self)
-        self._reg_output = UniWire(self)
+        self._reg = RegNext(sim, self)
+        self._reg_input = UniWire(sim, self)
+        self._reg_output = UniWire(sim, self)
 
         self._reg.connect(self._reg_input, self._reg_output)
 

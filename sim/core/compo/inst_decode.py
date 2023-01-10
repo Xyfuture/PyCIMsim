@@ -1,16 +1,9 @@
 from sim.circuit.module.registry import registry
-# from sim.circuit.port.port import UniWritePort, UniReadPort
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
 from sim.circuit.register.register import RegEnable
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import *
-from sim.des.simulator import Simulator
-from sim.des.event import Event
-from sim.des.base_compo import BaseCompo
-from sim.des.stime import Stime
-
-from sim.des.utils import fl
 
 
 class InstDecode(BaseCoreCompo):
@@ -18,36 +11,36 @@ class InstDecode(BaseCoreCompo):
     vector_inst = {'vmax', 'vadd', 'vsub', 'vmul', 'vmului', 'vact'}
     sync_inst = {'sync', 'wait_core', 'inc_state'}
     memory_inst = {'dram_to_global', 'global_to_dram', 'global_to_local',
-                     'global_clr', 'global_cpy', 'local_clr', 'local_cpy'}
+                   'global_clr', 'global_cpy', 'local_clr', 'local_cpy'}
 
-    def __init__(self, sim, config: CoreConfig):
-        super(InstDecode, self).__init__(sim)
+    def __init__(self, sim, compo, config: CoreConfig):
+        super(InstDecode, self).__init__(sim, compo)
         self._config = config
 
-        self._reg = RegEnable(self)
+        self._reg = RegEnable(sim, self)
 
-        self.id_enable = InWire(UniWire, self)
-        self.if_id_port = InWire(UniWire, self)
+        self.id_enable = InWire(UniWire, sim, self)
+        self.if_id_port = InWire(UniWire, sim, self)
 
-        self.id_stall = OutWire(UniWire, self)
+        self.id_stall = OutWire(UniWire, sim, self)
 
-        self.jump_pc = OutWire(UniWire, self)
+        self.jump_pc = OutWire(UniWire, sim, self)
 
-        self.reg_file_read_addr = OutWire(UniWire, self)
-        self.reg_file_read_data = InWire(UniWire, self)
+        self.reg_file_read_addr = OutWire(UniWire, sim, self)
+        self.reg_file_read_data = InWire(UniWire, sim, self)
 
-        self.id_out = OutWire(UniWire, self)
+        self.id_out = OutWire(UniWire, sim, self)
 
         # 接收是否忙的信号线
-        self.matrix_busy = InWire(UniWire, self)
-        self.vector_busy = InWire(UniWire, self)
-        self.transfer_busy = InWire(UniWire, self)
+        self.matrix_busy = InWire(UniWire, sim, self)
+        self.vector_busy = InWire(UniWire, sim, self)
+        self.transfer_busy = InWire(UniWire, sim, self)
         #
         # self.ex_busy = [self.matrix_busy, self.vector_busy, self.transfer_busy]
 
         # self._stall_reg = RegNext(self,None)
 
-        self._reg_output = UniWire(self)
+        self._reg_output = UniWire(sim, self)
         self._reg.connect(self.if_id_port, self.id_enable, self._reg_output)
 
         self.registry_sensitive()
@@ -260,9 +253,8 @@ class InstDecode(BaseCoreCompo):
         vector_busy_payload = self.vector_busy.read()
         transfer_busy_payload = self.transfer_busy.read()
 
-        inst = inst_payload['inst']
-        op = inst['op']
-
+        # inst = inst_payload['inst']
+        # op = inst['op']
         # stall_info = False
         # if op in self.matrix_inst and matrix_busy_payload:
         #     stall_info = True
@@ -270,6 +262,7 @@ class InstDecode(BaseCoreCompo):
         #     stall_info = True
         # elif op in self.transfer_inst and transfer_busy_payload:
         #     stall_info = True
+
         stall_info = matrix_busy_payload or vector_busy_payload or transfer_busy_payload
 
         self.id_stall.write(stall_info)
@@ -277,17 +270,20 @@ class InstDecode(BaseCoreCompo):
     def initialize(self):
         self.id_stall.write(False)
 
+    def get_running_status(self):
+        info = f"Core:{self._parent_compo.core_id} InstDecode> pc:"
+
 
 class DecodeForward(BaseCoreCompo):
-    def __init__(self, sim):
-        super(DecodeForward, self).__init__(sim)
+    def __init__(self, sim, compo):
+        super(DecodeForward, self).__init__(sim, compo)
 
-        self.id_out = InWire(UniWire, self)
+        self.id_out = InWire(UniWire, sim, self)
 
-        self.id_matrix_port = OutWire(UniWire, self)
-        self.id_vector_port = OutWire(UniWire, self)
-        self.id_transfer_port = OutWire(UniWire, self)
-        self.id_scalar_port = OutWire(UniWire, self)
+        self.id_matrix_port = OutWire(UniWire, sim, self)
+        self.id_vector_port = OutWire(UniWire, sim, self)
+        self.id_transfer_port = OutWire(UniWire, sim, self)
+        self.id_scalar_port = OutWire(UniWire, sim, self)
 
         self.registry_sensitive()
 

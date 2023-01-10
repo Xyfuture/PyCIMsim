@@ -23,6 +23,9 @@ class BaseCompo(metaclass=ABCMeta):
     def add_event(self, ent):
         self._sim.add_event(ent)
 
+    def make_lambda(self, func):
+        pass
+
     @property
     def current_time(self):
         return self._sim.current_time
@@ -44,14 +47,26 @@ class BaseCompo(metaclass=ABCMeta):
         return self._sim.next_handle_epsilon
 
 
-def event_handler(func):
-    func.last_run_time = Stime(-1, -1)
+def event_handler(run_once=True):
+    # 装饰器，表示该函数可以作为event的handler被调用
+    def run_once_wrapper(func):
+        func.as_event_handler = True
+        func.last_run_time = Stime(-1, -1)
 
-    def run_func(*args, **kwargs):
-        compo: BaseCompo = args[0]
-        # 一个tick-epsilon 只能跑一次
-        if func.last_run_time != compo.current_time:
-            func.last_run_time = compo.current_time
-            func(*args, **kwargs)
+        def run_once_func(*args, **kwargs):
+            compo: BaseCompo = args[0]
+            # 一个tick-epsilon 只能跑一次
+            if func.last_run_time != compo.current_time:
+                func.last_run_time = compo.current_time
+                func(*args, **kwargs)
 
-    return run_func
+        return run_once_func
+
+    def normal_wrapper(func):
+        func.as_event_handler = True
+        return func
+
+    if run_once:
+        return run_once_wrapper
+    else:
+        return normal_wrapper

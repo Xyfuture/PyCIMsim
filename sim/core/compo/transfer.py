@@ -11,19 +11,19 @@ from sim.network.simple.switch import SwitchInterface
 
 
 class TransferUnit(BaseCoreCompo):
-    def __init__(self, sim, core_id, config: CoreConfig):
-        super(TransferUnit, self).__init__(sim)
+    def __init__(self, sim, compo, core_id, config: CoreConfig):
+        super(TransferUnit, self).__init__(sim, compo)
         self._config = config
         self.core_id = core_id
 
-        self.id_transfer_port = InWire(UniWire, self)
+        self.id_transfer_port = InWire(UniWire, sim, self)
 
         self._reg_head = RegSustain(sim)
         self._status_input = UniWire(self)
         self._reg_head_output = UniWire(self)
         self._reg_head.connect(self.id_transfer_port, self._status_input, self._reg_head_output)
 
-        self.transfer_buffer = MessageInterface(self, 'transfer')
+        self.transfer_buffer = MessageInterface(sim, self, 'transfer')
 
         self.transfer_busy = OutWire(UniWire, self)
 
@@ -86,9 +86,9 @@ class TransferUnit(BaseCoreCompo):
         self.transfer_busy.write(stall_status)
 
     @registry(['noc_interface'])
-    def noc_receive_dispatch(self, bus_payload:BusPayload):
+    def noc_receive_dispatch(self, bus_payload: BusPayload):
         payload = bus_payload.payload
-        if isinstance(payload,SyncMessage):
+        if isinstance(payload, SyncMessage):
             if payload.op == 'sync':
                 self.sync_receive_handler(bus_payload)
             elif payload.op == 'wait_core':
@@ -99,9 +99,9 @@ class TransferUnit(BaseCoreCompo):
 
     # local_buffer receive
     @registry(['transfer_buffer'])
-    def local_buffer_receive_dispatch(self,bus_payload:BusPayload):
+    def local_buffer_receive_dispatch(self, bus_payload: BusPayload):
         self.memory_receive_handler(bus_payload)
-        self.transfer_buffer.allow_receive() # 暂时在这里接收
+        self.transfer_buffer.allow_receive()  # 暂时在这里接收
 
     # 发射指令
     @registry(['func_trigger'])
@@ -132,17 +132,16 @@ class TransferUnit(BaseCoreCompo):
             #                  'op': 'sync', 'message': 'start', 'sync_cnt': self.sync_cnt}
 
             start_sync_request = BusPayload(
-                src=self.core_id,dst=i,data_size=1,
+                src=self.core_id, dst=i, data_size=1,
                 payload=SyncMessage(
-                    op='sync',message='start',sync_cnt=self.sync_cnt
+                    op='sync', message='start', sync_cnt=self.sync_cnt
                 )
             )
-
 
             self.noc_interface.send(start_sync_request, None)
 
     # 处理所有与sync有关的信息,不论目前是什么状态
-    def sync_receive_handler(self, bus_payload:BusPayload):
+    def sync_receive_handler(self, bus_payload: BusPayload):
         def send_sync_finish_info():
 
             if len(self.sync_dict):
@@ -151,9 +150,9 @@ class TransferUnit(BaseCoreCompo):
                 #                   'op': 'sync', 'message': 'finish', 'sync_cnt': self.sync_cnt - 1}
 
                 finish_sync_request = BusPayload(
-                    src=self.core_id,dst=k,data_size=1,
+                    src=self.core_id, dst=k, data_size=1,
                     payload=SyncMessage(
-                        op='sync',message='finish',sync_cnt=self.sync_cnt -1
+                        op='sync', message='finish', sync_cnt=self.sync_cnt - 1
                     )
                 )
 
@@ -162,7 +161,7 @@ class TransferUnit(BaseCoreCompo):
                 self.finish_execute()
 
         if self._run_state == 'sync':
-            sync_message:SyncMessage = bus_payload.payload
+            sync_message: SyncMessage = bus_payload.payload
             if sync_message.message == 'start':
                 src = bus_payload.src
                 sync_cnt = sync_message.sync_cnt
@@ -185,26 +184,26 @@ class TransferUnit(BaseCoreCompo):
             assert False
         self.noc_interface.allow_receive()
 
-    def execute_wait_core(self, payload:TransferInfo):
+    def execute_wait_core(self, payload: TransferInfo):
 
         self.wait_state = payload['state']
         self.wait_core_id = payload['core_id']
 
         # new_payload = {'src': self.core_id, 'dst': self.wait_core_id, 'data_size': 1,
-                       # 'op': 'wait_core', 'message': 'start', 'state': self.wait_state}
+        # 'op': 'wait_core', 'message': 'start', 'state': self.wait_state}
 
         start_wait_core_request = BusPayload(
-            src=self.core_id,dst=self.wait_core_id,data_size=1,
-            payload =SyncMessage(
-                op='wait_core',message='start',state=self.wait_state
+            src=self.core_id, dst=self.wait_core_id, data_size=1,
+            payload=SyncMessage(
+                op='wait_core', message='start', state=self.wait_state
             )
         )
 
         self.noc_interface.send(start_wait_core_request, None)
 
     # 处理所有与wait_core有关的信息,不论目前是什么状态
-    def wait_core_receive_handler(self, bus_payload:BusPayload):
-        sync_message:SyncMessage = bus_payload.payload
+    def wait_core_receive_handler(self, bus_payload: BusPayload):
+        sync_message: SyncMessage = bus_payload.payload
         if sync_message.message == 'start':
             # 其他核开始等待本核
             state = sync_message.state  # 等待本核的state
@@ -212,9 +211,9 @@ class TransferUnit(BaseCoreCompo):
                 # new_payload = {'src': self.core_id, 'dst': bus_payload['src'], 'data_size': 1,
                 #                'op': 'wait_core', 'message': 'finish', 'state': self.state_value}
                 finish_wait_core_request = BusPayload(
-                    src=self.core_id,dst=bus_payload.src,data_size=1,
+                    src=self.core_id, dst=bus_payload.src, data_size=1,
                     payload=SyncMessage(
-                        op='wait_core',message='finish',state=self.state_value
+                        op='wait_core', message='finish', state=self.state_value
                     )
                 )
                 self.noc_interface.send(finish_wait_core_request, None)
@@ -248,7 +247,7 @@ class TransferUnit(BaseCoreCompo):
 
             self.noc_interface.send(finish_wait_core_request, None)
             del self.wait_core_dict[k]
-        self.make_event(self.finish_execute,self.current_time+1)
+        self.make_event(self.finish_execute, self.current_time + 1)
 
     def execute_memory(self, payload: TransferInfo):
 
@@ -335,15 +334,10 @@ class TransferUnit(BaseCoreCompo):
         else:
             assert False
 
-
-
-
-
     def finish_execute(self):
         # print("core_id:{} finish sync".format(self.core_id))
         self._run_state = 'idle'
         self.finish_wire.write(True)
-
 
     def get_running_status(self):
         print("Transfer> "

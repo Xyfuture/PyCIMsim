@@ -1,35 +1,28 @@
 import copy
 
 from sim.circuit.module.registry import registry
-# from sim.circuit.port.port import UniReadPort, UniWritePort
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
 
 from sim.circuit.register.register import RegNext
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import RegFileReadRequest
-from sim.des.simulator import Simulator
-from sim.des.event import Event
-from sim.des.base_compo import BaseCompo
-from sim.des.stime import Stime
-
-from sim.des.utils import fl
 
 
 class RegisterFiles(BaseCoreCompo):
-    def __init__(self, sim,config:CoreConfig):
-        super(RegisterFiles, self).__init__(sim)
+    def __init__(self, sim, compo, config: CoreConfig):
+        super(RegisterFiles, self).__init__(sim, compo)
         self._config = config
 
-        self.reg_file_read_addr = InWire(UniWire, self)
-        self.reg_file_read_data = OutWire(UniWire, self)
+        self.reg_file_read_addr = InWire(UniWire, sim, self)
+        self.reg_file_read_data = OutWire(UniWire, sim, self)
 
-        self.reg_file_write = InWire(UniWire, self)
+        self.reg_file_write = InWire(UniWire, sim, self)
 
-        self._reg_files = RegNext(self)
+        self._reg_files = RegNext(sim, self)
 
-        self._reg_files_output = UniWire(self)
-        self._reg_files_input = UniWire(self)
+        self._reg_files_output = UniWire(sim, self)
+        self._reg_files_input = UniWire(sim, self)
 
         self._reg_files.connect(self._reg_files_input, self._reg_files_output)
 
@@ -74,7 +67,6 @@ class RegisterFiles(BaseCoreCompo):
             rd_addr, rd_data = scalar_payload['rd_addr'], scalar_payload['rd_data']
             current_reg_files = copy.deepcopy(self._reg_files_output.read())  # 这里稍微有点破坏规则,但是为了省事,还是简化吧
 
-            # TODO 让一些dict仅可读,并方便复制
             current_reg_files[rd_addr] = rd_data
             self._reg_files_input.write(current_reg_files)
 

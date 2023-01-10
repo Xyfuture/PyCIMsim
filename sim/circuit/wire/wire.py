@@ -7,71 +7,75 @@ from sim.des.stime import Stime
 from sim.des.utils import fl
 
 
-class UniChannel:
-    def __init__(self, wire: BaseWire):
-        self._wire = wire
+# class UniChannel:
+#     def __init__(self, wire: BaseWire):
+#         self._wire = wire
+#
+#         self._payload = None
+#         self._next_payload = None
+#
+#         self._sim: Simulator = self._wire.sim
+#
+#     def read_value(self):
+#         return self._payload
+#
+#     def write_value(self, payload):
+#         self._next_payload = payload
+#         self._sim.add_event(Event(None, self.update_value, self._sim.next_update_epsilon))
+#
+#     def update_value(self):
+#         if self._next_payload != self._payload:
+#             self._payload = self._next_payload
+#
+#             self._sim.add_event(Event(None, self._wire.channel_callback, self._sim.next_handle_epsilon))
 
-        self._payload = None
-        self._next_payload = None
 
-        self._sim: Simulator = self._wire.sim
-
-    def read_value(self):
-        return self._payload
-
-    def write_value(self, payload):
-        self._next_payload = payload
-        self._sim.add_event(Event(None, self.update_value, self._sim.next_update_epsilon))
-
-    def update_value(self):
-        if self._next_payload != self._payload:
-            self._payload = self._next_payload
-
-            self._sim.add_event(Event(None, self._wire.channel_callback, self._sim.next_handle_epsilon))
-
-
-class UniPulseChannel(UniChannel):
-    def __init__(self, wire):
-        super(UniPulseChannel, self).__init__(wire)
-
-        self._update_time = Stime(0, 0)
-
-        self._next_run_time = Stime(0, 0)
-
-    def read_value(self):
-        return self._payload
-
-    def update_value(self):
-        if self._next_payload != self._payload:
-            self._payload = self._next_payload
-            self._update_time = self._sim.current_time
-            self._sim.add_event(Event(None, self._wire.channel_callback, self._sim.next_handle_epsilon))
-
-            self.run_next()
-
-    def set_to_default(self):
-        if self._update_time.tick != self._sim.current_time.tick:
-            self._payload = None
-            self._update_time = self._sim.current_time
-            self._sim.add_event(Event(None, self._wire.channel_callback, self._sim.next_handle_epsilon))
-
-    def run_next(self):
-        if not self.is_run_next():
-            self._sim.add_event(Event(None, self.set_to_default, self._sim.next_tick))
-            self._next_run_time = self._sim.next_tick
-
-    def is_run_next(self) -> bool:
-        next_time = self._sim.next_tick
-        if self._next_run_time == next_time:
-            return True
-        return False
+# class UniPulseChannel(UniChannel):
+#     def __init__(self, wire):
+#         super(UniPulseChannel, self).__init__(wire)
+#
+#         self._update_time = Stime(0, 0)
+#
+#         self._next_run_time = Stime(0, 0)
+#
+#     def read_value(self):
+#         return self._payload
+#
+#     def update_value(self):
+#         if self._next_payload != self._payload:
+#             self._payload = self._next_payload
+#             self._update_time = self._sim.current_time
+#             self._sim.add_event(Event(None, self._wire.channel_callback, self._sim.next_handle_epsilon))
+#
+#             self.run_next()
+#
+#     def set_to_default(self):
+#         if self._update_time.tick != self._sim.current_time.tick:
+#             self._payload = None
+#             self._update_time = self._sim.current_time
+#             self._sim.add_event(Event(None, self._wire.channel_callback, self._sim.next_handle_epsilon))
+#
+#     def run_next(self):
+#         if not self.is_run_next():
+#             self._sim.add_event(Event(None, self.set_to_default, self._sim.next_tick))
+#             self._next_run_time = self._sim.next_tick
+#
+#     def is_run_next(self) -> bool:
+#         next_time = self._sim.next_tick
+#         if self._next_run_time == next_time:
+#             return True
+#         return False
 
 
 class UniWire(BaseWire):
     def __init__(self, sim, compo, readable=True, writeable=True, as_io_wire=False):
         super(UniWire, self).__init__(sim, compo)
 
-        self._channel = UniChannel(self)
+        # self._channel = UniChannel(self)
+
+        self._payload = None
+        self._next_payload = None
+
         self._callbacks = fl()
 
         self._readable = readable
@@ -81,22 +85,33 @@ class UniWire(BaseWire):
 
     def write(self, payload):
         if self._writeable:
-            self._channel.write_value(payload)
+            self.write_value(payload)
 
     def read(self):
         if self._readable:
-            return self._channel.read_value()
+            return self._payload
 
     def add_callback(self, *args):
         self._callbacks.add_func(*args)
 
+    # force仅限 端口连接使用，跳过一个epsilon的更新
     def force_read(self):
-        return self._channel.read_value()
+        return self._payload
 
     def force_write(self, payload):
-        return self._channel.write_value(payload)
+        self._next_payload = payload
+        self.update_value()
 
-    def channel_callback(self):
+    def write_value(self, payload):
+        self._next_payload = payload
+        self.make_event(self.update_value, self.next_update_epsilon)
+
+    def update_value(self):
+        if self._next_payload != self._payload:
+            self._payload = self._next_payload
+            self.make_event(self.run_callback, self.next_handle_epsilon)
+
+    def run_callback(self):
         self._callbacks()
 
     def set_readable(self, readable):
@@ -132,11 +147,11 @@ class UniWire(BaseWire):
         return self._as_io_wire
 
 
-class UniPulseWire(UniWire):
-    def __init__(self, sim, compo, readable=True, writeable=True, as_io_wire=False):
-        super(UniPulseWire, self).__init__(sim, compo, readable, writeable, as_io_wire)
-
-        self._channel = UniPulseChannel(self)
+# class UniPulseWire(UniWire):
+#     def __init__(self, sim, compo, readable=True, writeable=True, as_io_wire=False):
+#         super(UniPulseWire, self).__init__(sim, compo, readable, writeable, as_io_wire)
+#
+#         self._channel = UniPulseChannel(self)
 
 
 def InWire(wire_class, sim, compo) -> UniWire:

@@ -4,18 +4,19 @@ from math import ceil
 from sim.circuit.module.base_module import BaseModule
 from sim.circuit.module.registry import registry
 from sim.config.config import MemoryConfig
+from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import MemoryRequest, BusPayload, MemoryReadValue
 from sim.network.simple.switch import SwitchInterface
 
 
-class Memory(BaseModule):
-    def __init__(self, sim, interface_id, config: MemoryConfig = None):
-        super(Memory, self).__init__(sim)
+class Memory(BaseCoreCompo):
+    def __init__(self, sim, compo, interface_id, config: MemoryConfig = None):
+        super(Memory, self).__init__(sim, compo)
 
         self._config = config
         self._interface_id = interface_id
 
-        self.memory_port = SwitchInterface(self, interface_id)
+        self.memory_port = SwitchInterface(sim, self, interface_id)
 
         self._request_buffer_size = 10  # 实际要看config中的配置
         self._request_buffer = queue.Queue(maxsize=self._request_buffer_size)

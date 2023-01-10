@@ -7,14 +7,13 @@ from typing import Dict
 from sim.config.config import BusConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import BusPayload
-from sim.des.base_element import BaseElement
-from sim.des.stime import Stime
+from sim.des.base_compo import BaseCompo
 from sim.des.utils import fl
 
 
 class MessageBus(BaseCoreCompo):
-    def __init__(self, sim, config: BusConfig):
-        super(MessageBus, self).__init__(sim)
+    def __init__(self, sim, compo, config: BusConfig):
+        super(MessageBus, self).__init__(sim, compo)
 
         self._config = config
 
@@ -57,14 +56,13 @@ class MessageBus(BaseCoreCompo):
                 return self._config.latency * times
             elif self._config.bus_topology == 'mesh':
                 # memory的补丁
-                if isinstance(bus_payload.src,str) or isinstance(bus_payload.dst,str):
+                if isinstance(bus_payload.src, str) or isinstance(bus_payload.dst, str):
                     return self._config.latency * times * 10
 
-                src = (bus_payload.src/self._config.layout[1],bus_payload.src%self._config.layout[1])
-                dst = (bus_payload.dst/self._config.layout[1],bus_payload.dst%self._config.layout[1])
+                src = (bus_payload.src / self._config.layout[1], bus_payload.src % self._config.layout[1])
+                dst = (bus_payload.dst / self._config.layout[1], bus_payload.dst % self._config.layout[1])
 
-                hops = abs(src[0] - dst[0]) +\
-                        abs(src[1] - dst[1])
+                hops = abs(src[0] - dst[0]) + abs(src[1] - dst[1])
                 self.add_dynamic_energy(self._config.energy * times * hops)
                 return self._config.latency * times * hops
         else:
@@ -79,9 +77,9 @@ class MessageBus(BaseCoreCompo):
         interface.set_bus(self)
 
 
-class MessageInterface(BaseElement):
-    def __init__(self, compo, interface_id, callback=None):
-        super().__init__(compo)
+class MessageInterface(BaseCompo):
+    def __init__(self, sim, compo, interface_id, callback=None):
+        super().__init__(sim, compo)
 
         self._interface_id = interface_id
 
@@ -130,7 +128,7 @@ class MessageInterface(BaseElement):
         self._receive_ready = False
 
     def allow_receive(self):
-        self.make_event(self._allow_receive,self.current_time+1)
+        self.make_event(self._allow_receive, self.current_time + 1)
 
     def _allow_receive(self):
         if not self._receive_ready:

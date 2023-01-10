@@ -8,21 +8,21 @@ from sim.des.base_compo import *
 
 
 class EventWrapper:
-    def __init__(self, ent:Event):
+    def __init__(self, ent: Event):
         self._event = ent
 
     def __hash__(self):
-        tmp_str = str(self._event.handler) + str(self._event.time.tick) + str(self._event.time.epsilon) + str(self._event.compo)
+        tmp_str = str(self._event.handler) + str(self._event.time.tick) + str(self._event.time.epsilon) + str(
+            self._event.compo)
         return hash(tmp_str)
 
     def __eq__(self, other):
         return self._event.time == other._event.time and \
-               self._event.handler == other._event.handler and\
-               self._event.compo == other._event.compo
+            self._event.handler == other._event.handler and \
+            self._event.compo == other._event.compo
 
     def get_event(self):
         return self._event
-
 
 
 class Simulator:
@@ -40,7 +40,7 @@ class Simulator:
             compo.initialize()
         self.flush_queue_buffer()
 
-    def add_event(self,event_):
+    def add_event(self, event_):
         # assert self._ctime != event_.time # 不能插入当前时间的事件
         self._tmp_event_set[EventWrapper(event_)] = None
 
@@ -50,12 +50,11 @@ class Simulator:
         self._tmp_event_set = OrderedDict()
 
     def run(self):
-        st = time.time()
         while not self._event_queue.empty():
-            tmp_event = self._event_queue.get()
-            self._ctime = tmp_event.time
+            cur_event = self._event_queue.get()
+            self._ctime = cur_event.time
 
-            tmp_event.process()
+            cur_event.process()
 
             if not self._event_queue.empty():
                 if self._ctime != self._event_queue.queue[0].time:
@@ -64,16 +63,14 @@ class Simulator:
                 self.flush_queue_buffer()
 
             self._event_cnt += 1
-            # print(self._event_cnt)
-            # if self._event_cnt == 40680:
-            #     print('here')
-            # if self._event_cnt % 100000 == 0 :
-            #     print("real time:{}".format(time.time()-st))
-            #     print("cycles:{}".format(self.current_time.tick))
-            #     st = time.time()
+
+            if __debug__:
+                if self._event_cnt % 1000 == 0:
+                    print(f"event cnt:{self._event_cnt}")
 
         print(f"run simulate time {self.current_time}")
-    def add_compo(self, compo:BaseCompo):
+
+    def add_compo(self, compo: BaseCompo):
         if isinstance(compo, BaseCompo):
             self._compos.append(compo)
 
@@ -83,7 +80,7 @@ class Simulator:
 
     @property
     def next_tick(self):
-        return Stime(self._ctime.tick + 1,0)
+        return Stime(self._ctime.tick + 1, 0)
 
     @property
     def next_epsilon(self):
@@ -92,11 +89,11 @@ class Simulator:
     @property
     def next_update_epsilon(self):
         if self._ctime.epsilon % 2 == 0:
-            return self._ctime + (0,2)
-        return self._ctime + (0,1)
+            return self._ctime + (0, 2)
+        return self._ctime + (0, 1)
 
     @property
     def next_handle_epsilon(self):
         if self._ctime.epsilon % 2 == 0:
-            return self._ctime + (0,1)
-        return self._ctime + (0,2)
+            return self._ctime + (0, 1)
+        return self._ctime + (0, 2)
