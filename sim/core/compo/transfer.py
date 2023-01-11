@@ -1,13 +1,21 @@
-from sim.circuit.module.basic_modules import RegSustain
+from typing import Optional
+
+from sim.circuit.hybrid.trigger import Trigger
 from sim.circuit.module.registry import registry
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
-from sim.circuit.register.register import RegNext, Trigger
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
+from sim.circuit.register.register import RegNext
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.core.compo.connection.payloads import TransferInfo, BusPayload, MemoryRequest, SyncMessage
 
 from sim.core.compo.message_bus import MessageInterface
+from sim.core.utils.payload.base import PayloadBase
 from sim.network.simple.switch import SwitchInterface
+
+
+class TransferFSMPayload(PayloadBase):
+    transfer_info: Optional[TransferInfo] = None
+    status: Optional[str] = None  # idle busy finish(just finish before idle)
 
 
 class TransferUnit(BaseCoreCompo):
@@ -18,22 +26,25 @@ class TransferUnit(BaseCoreCompo):
 
         self.id_transfer_port = InWire(UniWire, sim, self)
 
-        self._reg_head = RegSustain(sim)
-        self._status_input = UniWire(self)
-        self._reg_head_output = UniWire(self)
-        self._reg_head.connect(self.id_transfer_port, self._status_input, self._reg_head_output)
+        # self._reg_head = RegSustain(sim)
+        # self._status_input = UniWire(self)
+        # self._reg_head_output = UniWire(self)
+        # self._reg_head.connect(self.id_transfer_port, self._status_input, self._reg_head_output)
+
+        self._fsm_reg = RegNext(sim, self)
+        self._fsm_reg_input = UniWire(sim, self)
+        self._fsm_reg_output = UniWire(sim, self)
+        self._fsm_reg.connect(self._fsm_reg_input, self._fsm_reg_output)
 
         self.transfer_buffer = MessageInterface(sim, self, 'transfer')
 
-        self.transfer_busy = OutWire(UniWire, self)
+        self.transfer_busy = OutWire(UniWire, sim, self)
 
-        self.finish_wire = UniPulseWire(self)
+        self._finish_wire = UniWire(sim, self)
 
-        self.func_trigger = Trigger(self)
-        self.trigger_input = UniWire(self)
-        self.func_trigger.connect(self.trigger_input)
+        self.func_trigger = Trigger(sim, self)
 
-        self.noc_interface = SwitchInterface(self, core_id)
+        self.noc_interface = SwitchInterface(sim, self, core_id)
 
         self._run_state = 'idle'
 
@@ -49,41 +60,90 @@ class TransferUnit(BaseCoreCompo):
         self.registry_sensitive()
 
     def initialize(self):
-        self._status_input.write(True)
+        self._fsm_reg.init(TransferFSMPayload(status='idle'))
+        self._finish_wire.init(False)
+
+        self.transfer_busy.write(False)
 
     def calc_compute_latency(self, payload):
         return 10
 
-    @registry(['_reg_head_output', 'finish_wire'])
-    def check_stall_status(self):
-        reg_head_payload = self._reg_head_output.read()
-        finish_info = self.finish_wire.read()
+    # @registry(['_reg_head_output', 'finish_wire'])
+    # def check_stall_status(self):
+    #     reg_head_payload = self._reg_head_output.read()
+    #     finish_info = self.finish_wire.read()
+    #
+    #     data_payload, idle = reg_head_payload['data_payload'], reg_head_payload['status']
+    #
+    #     new_idle_status = True
+    #     trigger_status = False
+    #     stall_status = False
+    #
+    #     if idle:
+    #         if data_payload:
+    #             if data_payload['ex'] == 'transfer':
+    #                 new_idle_status = False
+    #                 trigger_status = True
+    #                 stall_status = True
+    #     else:
+    #         if finish_info:
+    #             new_idle_status = True
+    #             trigger_status = False
+    #             stall_status = False
+    #         else:
+    #             new_idle_status = False
+    #             trigger_status = False
+    #             stall_status = True
+    #
+    #     self._status_input.write(new_idle_status)
+    #     self.trigger_input.write(trigger_status)
+    #     self.transfer_busy.write(stall_status)
 
-        data_payload, idle = reg_head_payload['data_payload'], reg_head_payload['status']
+    @registry(['_fsm_reg_output', '_finish_wire', 'id_transfer_port'])
+    def gen_fsm_input(self):
+        fsm_payload: TransferFSMPayload = self._fsm_reg_output.read()
+        old_transfer_info, status = fsm_payload.transfer_info, fsm_payload.status
 
-        new_idle_status = True
-        trigger_status = False
-        stall_status = False
+        finish_info = self._finish_wire.read()
 
-        if idle:
-            if data_payload:
-                if data_payload['ex'] == 'transfer':
-                    new_idle_status = False
-                    trigger_status = True
-                    stall_status = True
-        else:
-            if finish_info:
-                new_idle_status = True
-                trigger_status = False
-                stall_status = False
+        new_transfer_info: TransferInfo = self.id_transfer_port.read()
+
+        new_fsm_payload = fsm_payload
+        if status == 'idle':
+            if new_transfer_info:
+                new_fsm_payload = TransferFSMPayload(
+                    status='busy', transfer_info=new_transfer_info
+                )
+        elif status == 'finish':
+            if new_transfer_info:
+                new_fsm_payload = TransferFSMPayload(
+                    status='busy', transfer_info=new_transfer_info
+                )
             else:
-                new_idle_status = False
-                trigger_status = False
-                stall_status = True
+                new_fsm_payload = TransferFSMPayload(status='idle')
+        elif status == 'busy':
+            if finish_info:
+                new_fsm_payload = TransferFSMPayload(status='finish')
+        else:
+            assert False
 
-        self._status_input.write(new_idle_status)
-        self.trigger_input.write(trigger_status)
-        self.transfer_busy.write(stall_status)
+        self._fsm_reg_output.write(new_fsm_payload)
+
+    @registry(['_fsm_reg_output'])
+    def process_fsm_output(self):
+        fsm_payload = self._fsm_reg_output.read()
+        transfer_info, status = fsm_payload.transfer_info, fsm_payload.status
+
+        if status == 'idle':
+            pass
+        elif status == 'finish':
+            self.transfer_busy.write(False)
+            self._finish_wire.write(False)
+        elif status == 'busy':
+            self.func_trigger.set()
+            self.transfer_busy.write(True)
+        else:
+            assert False
 
     @registry(['noc_interface'])
     def noc_receive_dispatch(self, bus_payload: BusPayload):
@@ -106,23 +166,24 @@ class TransferUnit(BaseCoreCompo):
     # 发射指令
     @registry(['func_trigger'])
     def process(self):
-        reg_head_payload = self._reg_head_output.read()
-        data_payload = reg_head_payload['data_payload']
+        # reg_head_payload = self._reg_head_output.read()
+        # data_payload = reg_head_payload['data_payload']
+        transfer_info: TransferInfo = self._fsm_reg_output.read().transfer_info
 
-        op = data_payload['op']
+        op = transfer_info.op
         self._run_state = op
 
         if op == 'sync':
-            self.execute_sync(data_payload)
+            self.execute_sync(transfer_info)
         elif op == 'wait_core':
-            self.execute_wait_core(data_payload)
+            self.execute_wait_core(transfer_info)
         elif op == 'inc_state':
-            self.execute_inc_state(data_payload)
+            self.execute_inc_state(transfer_info)
         else:
-            self.execute_memory(data_payload)
+            self.execute_memory(transfer_info)
 
-    def execute_sync(self, payload):
-        start_core, end_core = payload['start_core'], payload['end_core']
+    def execute_sync(self, transfer_info: TransferInfo):
+        start_core, end_core = transfer_info.sync_info['start_core'], transfer_info.sync_info['end_core']
 
         # 初始化同步dict  发送自己开始的数据给其他的核
         for i in range(start_core, end_core + 1):
@@ -184,10 +245,10 @@ class TransferUnit(BaseCoreCompo):
             assert False
         self.noc_interface.allow_receive()
 
-    def execute_wait_core(self, payload: TransferInfo):
+    def execute_wait_core(self, transfer_info: TransferInfo):
 
-        self.wait_state = payload['state']
-        self.wait_core_id = payload['core_id']
+        self.wait_state = transfer_info.sync_info['state']
+        self.wait_core_id = transfer_info.sync_info['core_id']
 
         # new_payload = {'src': self.core_id, 'dst': self.wait_core_id, 'data_size': 1,
         # 'op': 'wait_core', 'message': 'start', 'state': self.wait_state}
@@ -227,7 +288,7 @@ class TransferUnit(BaseCoreCompo):
 
         self.noc_interface.allow_receive()
 
-    def execute_inc_state(self, payload):
+    def execute_inc_state(self, transfer_info):
         self.state_value += 1
 
         finish_list = []
@@ -249,15 +310,15 @@ class TransferUnit(BaseCoreCompo):
             del self.wait_core_dict[k]
         self.make_event(self.finish_execute, self.current_time + 1)
 
-    def execute_memory(self, payload: TransferInfo):
+    def execute_memory(self, transfer_info: TransferInfo):
 
-        op = payload.op
+        op = transfer_info.op
         if op == 'dram_to_global':
             dram_read_reqeust = BusPayload(
                 src=self.core_id, dst='dram', data_size=1,
                 payload=MemoryRequest(
-                    access_type='read', addr=payload.mem_access_info.src_addr,
-                    data_size=payload.mem_access_info.data_size
+                    access_type='read', addr=transfer_info.mem_access_info.src_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.noc_interface.send(dram_read_reqeust, None)
@@ -265,8 +326,8 @@ class TransferUnit(BaseCoreCompo):
             global_read_reqeust = BusPayload(
                 src=self.core_id, dst='global', data_size=1,
                 payload=MemoryRequest(
-                    access_type='read', addr=payload.mem_access_info.src_addr,
-                    data_size=payload.mem_access_info.data_size
+                    access_type='read', addr=transfer_info.mem_access_info.src_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.noc_interface.send(global_read_reqeust, None)
@@ -274,60 +335,60 @@ class TransferUnit(BaseCoreCompo):
             local_read_request = BusPayload(
                 src='transfer', dst='buffer', data_size=1,
                 payload=MemoryRequest(
-                    access_type='read', addr=payload.mem_access_info.src_addr,
-                    data_size=payload.mem_access_info.data_size
+                    access_type='read', addr=transfer_info.mem_access_info.src_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.transfer_buffer.send(local_read_request, None)
         elif op == 'global_clr':
             global_write_request = BusPayload(
-                src=self.core_id, dst='global', data_size=payload.mem_access_info.data_size,
+                src=self.core_id, dst='global', data_size=transfer_info.mem_access_info.data_size,
                 payload=MemoryRequest(
-                    access_type='write', addr=payload.mem_access_info.src_addr,
-                    data_size=payload.mem_access_info.data_size
+                    access_type='write', addr=transfer_info.mem_access_info.src_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.noc_interface.send(global_write_request, self.finish_execute)
         elif op == 'local_clr':
             local_write_request = BusPayload(
-                src='transfer', dst='buffer', data_size=payload.mem_access_info.data_size,
+                src='transfer', dst='buffer', data_size=transfer_info.mem_access_info.data_size,
                 payload=MemoryRequest(
-                    access_type='write', addr=payload.mem_access_info.src_addr,
-                    data_size=payload.mem_access_info.data_size
+                    access_type='write', addr=transfer_info.mem_access_info.src_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.transfer_buffer.send(local_write_request, self.finish_execute)
 
     def memory_receive_handler(self, bus_payload: BusPayload):
         # 第二次执行时的操作,读取的数据到了,转发到第二个
-        reg_head_payload = self._reg_head_output.read()
-        data_payload: TransferInfo = reg_head_payload['data_payload']
+        fsm_payload = self._fsm_reg_output.read()
+        transfer_info: TransferInfo = fsm_payload.transfer_info
 
-        op = data_payload.op
+        op = transfer_info.op
         if op in ['global_to_local', 'local_cpy']:
             local_write_request = BusPayload(
-                src='transfer', dst='buffer', data_size=data_payload.mem_access_info.data_size,
+                src='transfer', dst='buffer', data_size=transfer_info.mem_access_info.data_size,
                 payload=MemoryRequest(
-                    access_type='write', addr=data_payload.mem_access_info.dst_addr,
-                    data_size=data_payload.mem_access_info.data_size
+                    access_type='write', addr=transfer_info.mem_access_info.dst_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.transfer_buffer.send(local_write_request, self.finish_execute)
         elif op in ['dram_to_global', 'local_to_global', 'global_cpy']:
             global_write_request = BusPayload(
-                src=self.core_id, dst='global', data_size=data_payload.mem_access_info.data_size,
+                src=self.core_id, dst='global', data_size=transfer_info.mem_access_info.data_size,
                 payload=MemoryRequest(
-                    access_type='write', addr=data_payload.mem_access_info.dst_addr,
-                    data_size=data_payload.mem_access_info.data_size
+                    access_type='write', addr=transfer_info.mem_access_info.dst_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.noc_interface.send(global_write_request, self.finish_execute)
         elif op == 'global_to_dram':
             dram_write_request = BusPayload(
-                src=self.core_id, dst='dram', data_size=data_payload.mem_access_info.data_size,
+                src=self.core_id, dst='dram', data_size=transfer_info.mem_access_info.data_size,
                 payload=MemoryRequest(
-                    access_type='write', addr=data_payload.mem_access_info.dst_addr,
-                    data_size=data_payload.mem_access_info.data_size
+                    access_type='write', addr=transfer_info.mem_access_info.dst_addr,
+                    data_size=transfer_info.mem_access_info.data_size
                 )
             )
             self.noc_interface.send(dram_write_request, self.finish_execute)
@@ -337,11 +398,10 @@ class TransferUnit(BaseCoreCompo):
     def finish_execute(self):
         # print("core_id:{} finish sync".format(self.core_id))
         self._run_state = 'idle'
-        self.finish_wire.write(True)
+        self._finish_wire.write(True)
 
     def get_running_status(self):
-        print("Transfer> "
-              f"pc:{self._reg_head_output.read()['data_payload'].pc}")
+        print("Transfer> ")
 
 # 一些格式信息
 # {'src':1,'dst':2,'data_size':1,'op':'sync','message':'start/finish','sync_cnt':sync_cnt}

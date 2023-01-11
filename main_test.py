@@ -63,4 +63,5 @@ if __name__ == "__main__":
     bus % vector.vector_buffer
 
     sim.initialize()
-    sim.run()
+    # sim.run()
+    sim.new_run()

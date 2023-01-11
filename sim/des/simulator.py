@@ -12,8 +12,9 @@ class EventWrapper:
         self._event = ent
 
     def __hash__(self):
-        tmp_str = str(self._event.handler) + str(self._event.time.tick) + str(self._event.time.epsilon) + str(
-            self._event.compo)
+        # tmp_str = str(self._event.handler) + str(self._event.time.tick) + str(self._event.time.epsilon) + str(
+        # self._event.compo)
+        tmp_str = id(self._event.handler) + self._event.time.tick + self._event.time.epsilon
         return hash(tmp_str)
 
     def __eq__(self, other):
@@ -50,6 +51,7 @@ class Simulator:
         self._tmp_event_set = OrderedDict()
 
     def run(self):
+        st = time.time()
         while not self._event_queue.empty():
             cur_event = self._event_queue.get()
             self._ctime = cur_event.time
@@ -67,8 +69,31 @@ class Simulator:
             # if __debug__:
             #     if self._event_cnt % 1000 == 0:
             #         print(f"event cnt:{self._event_cnt}")
-
+        ed = time.time()
         print(f"run simulate time {self.current_time}")
+        print(f"run time {ed - st}")
+
+    def new_run(self):
+        self._ctime = Stime(-1, -1)
+        st = time.time()
+        while not self._event_queue.empty():
+
+            if self._ctime == self._event_queue.queue[0].time:
+                assert False
+            else:
+                self._ctime = self._event_queue.queue[0].time
+
+            for i in range(len(self._event_queue.queue)):
+                if self._ctime != self._event_queue.queue[0].time:
+                    break
+                cur_event = self._event_queue.get()
+                cur_event.process()
+                self._event_cnt += 1
+
+            self.flush_queue_buffer()
+        ed = time.time()
+        print(f"run simulate time {self.current_time}")
+        print(f"run time {ed - st}")
 
     def add_compo(self, compo: BaseCompo):
         if isinstance(compo, BaseCompo):

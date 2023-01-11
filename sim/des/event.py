@@ -8,10 +8,11 @@ class Event:
         self.time = time
 
     def process(self):
-        if callable(self.handler):
-            self.handler()
-        else:
-            raise ("not callable")
+        # if callable(self.handler):
+        #     self.handler()
+        # else:
+        #     raise ("not callable")
+        self.handler()
 
     def __eq__(self, other):
         return self.time == other.time
