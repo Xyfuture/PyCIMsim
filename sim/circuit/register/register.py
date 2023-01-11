@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sim.circuit.register.base_register import BaseRegister
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
 from sim.des.base_compo import BaseCompo
 from sim.des.stime import Stime
 from sim.des.utils import fl
@@ -33,7 +33,7 @@ class RegNext(BaseRegister):
         self._payload = payload
         self._update_time = self.current_time
 
-        self._output_wire.write(self._payload)
+        self._output_wire.init(self._payload)
 
     def pulse(self):
         if self._input_wire.read() != self._payload:
@@ -108,7 +108,6 @@ class RegEnable(BaseRegister):
 
     def process_input(self):
         if self._input_wire.read() != self._payload:
-
             self.run_next()
 
     def process_enable(self):

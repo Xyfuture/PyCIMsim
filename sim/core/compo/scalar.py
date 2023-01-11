@@ -46,4 +46,4 @@ class ScalarUnit(BaseCoreCompo):
         self.reg_file_write.write({'rd_addr': rd_addr, 'rd_data': rd_data})
 
     def initialize(self):
-        pass
+        self.reg_file_write.write(None)

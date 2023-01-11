@@ -6,7 +6,7 @@ from sim.circuit.module.registry import registry
 from sim.circuit.register.register import RegNext
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
 from sim.core.compo.connection.payloads import VectorInfo, BusPayload, MemoryRequest
 from sim.core.compo.message_bus import MessageInterface
 from sim.core.utils.payload.base import PayloadBase
@@ -38,14 +38,17 @@ class VectorUnit(BaseCoreCompo):
 
         self.vector_busy = OutWire(UniWire, sim, self)
 
-        self._finish_wire = UniPulseWire(sim, self)
+        self._finish_wire = UniWire(sim, self)
 
         self.func_trigger = Trigger(sim, self)
 
         self.registry_sensitive()
 
     def initialize(self):
-        self._fsm_reg.init(VectorFSMPayload)
+        self._fsm_reg.init(VectorFSMPayload(status='idle'))
+        self._finish_wire.init(False)
+
+        self.vector_busy.write(False)
 
     def calc_compute_latency(self, vector_info: VectorInfo):
         if self._config:
@@ -93,9 +96,10 @@ class VectorUnit(BaseCoreCompo):
 
         finish_info = self._finish_wire.read()
 
-        new_vector_info: VectorInfo = old_vector_info
+        new_vector_info: VectorInfo = self.id_vector_port.read()
 
-        new_fsm_payload = None
+        new_fsm_payload = fsm_payload
+
         if status == 'idle':
             if new_vector_info:
                 new_fsm_payload = VectorFSMPayload(
@@ -114,8 +118,7 @@ class VectorUnit(BaseCoreCompo):
         else:
             assert False
 
-        if new_vector_info:
-            self._fsm_reg_input.write(new_fsm_payload)
+        self._fsm_reg_input.write(new_fsm_payload)
 
     @registry(['_fsm_reg_output'])
     def process_fsm_output(self):
@@ -129,6 +132,7 @@ class VectorUnit(BaseCoreCompo):
             self.vector_busy.write(stall_status)
             self._finish_wire.write(False)
         elif status == 'busy':
+            # print(f'vector start tick:{self.current_time}')
             stall_status = True
             self.func_trigger.set()
             self.vector_busy.write(stall_status)
@@ -165,6 +169,6 @@ class VectorUnit(BaseCoreCompo):
         self.make_event(f, self.current_time + latency)
 
     def finish_execute(self):
-
+        # print(f'vector finish tick:{self.current_time}')
         self.vector_buffer.allow_receive()
         self._finish_wire.write(True)

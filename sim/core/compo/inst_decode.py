@@ -269,6 +269,11 @@ class InstDecode(BaseCoreCompo):
 
     def initialize(self):
         self.id_stall.write(False)
+        self.jump_pc.write(None)
+        self.id_out.write(None)
+        self.reg_file_read_addr.write(None)
+
+        self._reg.init(None)
 
     def get_running_status(self):
         info = f"Core:{self._parent_compo.core_id} InstDecode> pc:"
@@ -295,21 +300,12 @@ class DecodeForward(BaseCoreCompo):
         }
 
     def initialize(self):
-        pass
+        for k,v in self._map_port.items():
+            v.write(None)
 
     @registry(['id_out'])
     def process(self):
         payload = self.id_out.read()
-
-        # if not payload:
-        #     for k,v in self._map_port.items():
-        #         v.write(payload)
-        #
-        # for port_name in self._map_port:
-        #     if port_name == payload['ex']:
-        #         self._map_port[port_name].write(payload)
-        #     else:
-        #         self._map_port[port_name].write(None)
 
         for k, v in self._map_port.items():
             v.write(None)

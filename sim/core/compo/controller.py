@@ -1,6 +1,6 @@
 from sim.circuit.module.registry import registry
 # from sim.circuit.port.port import UniReadPort, UniWritePort
-from sim.circuit.wire.wire import InWire, UniWire, OutWire, UniPulseWire
+from sim.circuit.wire.wire import InWire, UniWire, OutWire
 from sim.core.compo.base_core_compo import BaseCoreCompo
 from sim.des.simulator import Simulator
 from sim.des.event import Event

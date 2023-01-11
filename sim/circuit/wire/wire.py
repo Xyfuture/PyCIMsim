@@ -83,6 +83,11 @@ class UniWire(BaseWire):
 
         self._as_io_wire = as_io_wire
 
+    def init(self,payload):
+        #  仅初始化值，不调用回调函数
+        #  对于OutWire来说，可以使用write初始化，对于内部的wire或者reg使用init初始化
+        self._payload = payload
+
     def write(self, payload):
         if self._writeable:
             self.write_value(payload)

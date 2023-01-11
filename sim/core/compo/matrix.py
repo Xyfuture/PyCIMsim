@@ -46,9 +46,12 @@ class MatrixUnit(BaseCoreCompo):
         self.registry_sensitive()
 
     def initialize(self):
-        self._fsm_reg.init(MatrixFSMPayload(
+        self._fsm_reg.init(MatrixFSMPayload(  # 初始化为None会报错，需要初始化为MatrixFSMPayload
             matrix_info=None, status='idle'
         ))
+        self._finish_wire.init(False)
+
+        self.matrix_busy.write(False)
 
     def calc_compute_latency(self, matrix_info: MatrixInfo):
         if self._config:
@@ -67,7 +70,7 @@ class MatrixUnit(BaseCoreCompo):
 
         new_matrix_info: MatrixInfo = self.id_matrix_port.read()
 
-        new_fsm_payload = None
+        new_fsm_payload = fsm_payload
         if status == 'idle':
             if new_matrix_info:
                 new_fsm_payload = MatrixFSMPayload(
@@ -87,8 +90,7 @@ class MatrixUnit(BaseCoreCompo):
             assert False
 
         # 输出到状态机的寄存器中，如果没变化不输出（没实现__eq__,不确定比较结果）
-        if new_fsm_payload:
-            self._fsm_reg_input.write(new_fsm_payload)
+        self._fsm_reg_input.write(new_fsm_payload)
 
     @registry(['_fsm_reg_output'])
     def process_fsm_output(self):
@@ -103,6 +105,7 @@ class MatrixUnit(BaseCoreCompo):
             self.matrix_busy.write(stall_status)
             self._finish_wire.write(False)  # 手动关闭
         elif status == 'busy':
+            # print(f"gemv start tick:{self.current_time}")
             stall_status = True
             self.func_trigger.set()
             self.matrix_busy.write(stall_status)
@@ -147,6 +150,6 @@ class MatrixUnit(BaseCoreCompo):
         self.make_event(f, self.current_time + latency)
 
     def finish_execute(self):
-
+        # print(f'gemv finish tick:{self.current_time}')
         self.matrix_buffer.allow_receive()
         self._finish_wire.write(True)

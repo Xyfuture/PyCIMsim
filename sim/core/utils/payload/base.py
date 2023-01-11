@@ -21,9 +21,10 @@ class PayloadBase:
         return cls(**data)
 
     def __eq__(self, other: PayloadBase):
-        for k in self.__annotations__:
-            if getattr(self, k) != getattr(other, k):
-                return False
-        return True
-
+        if isinstance(other,PayloadBase):
+            for k in self.__annotations__:
+                if getattr(self, k) != getattr(other, k):
+                    return False
+            return True
+        return False
     # 没有进行严格的check,但是有类型注解了,还算够用吧

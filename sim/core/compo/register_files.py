@@ -20,10 +20,8 @@ class RegisterFiles(BaseCoreCompo):
         self.reg_file_write = InWire(UniWire, sim, self)
 
         self._reg_files = RegNext(sim, self)
-
         self._reg_files_output = UniWire(sim, self)
         self._reg_files_input = UniWire(sim, self)
-
         self._reg_files.connect(self._reg_files_input, self._reg_files_output)
 
         self.registry_sensitive()
@@ -31,6 +29,8 @@ class RegisterFiles(BaseCoreCompo):
     def initialize(self):
         tmp = [0 for _ in range(32)]
         self._reg_files.init(tmp)
+
+        self.reg_file_read_data.write(None)
 
     @registry(['_reg_files_output', 'reg_file_read_addr', 'reg_file_write'])
     def read_value(self):

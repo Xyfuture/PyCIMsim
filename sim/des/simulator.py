@@ -64,9 +64,9 @@ class Simulator:
 
             self._event_cnt += 1
 
-            if __debug__:
-                if self._event_cnt % 1000 == 0:
-                    print(f"event cnt:{self._event_cnt}")
+            # if __debug__:
+            #     if self._event_cnt % 1000 == 0:
+            #         print(f"event cnt:{self._event_cnt}")
 
         print(f"run simulate time {self.current_time}")
 

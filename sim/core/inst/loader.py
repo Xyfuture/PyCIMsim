@@ -6,8 +6,8 @@ def load_dict(file_path):
     with open(file_path, 'r') as f:
         for line in f.readlines():
             tmp = json.loads(line)
-            # if inst_filter(tmp):
-            inst.append(convert(tmp))
+            if inst_filter(tmp):
+                inst.append(convert(tmp))
     return inst
 
 
@@ -78,5 +78,7 @@ def convert(inst: dict):
 
 def inst_filter(inst:dict):
     if inst['opcode'] == 'wait_core' or inst['opcode'] == 'sync':
+        return False
+    if inst['opcode'] in ['l2g','g2l','g2d','d2g','global_cpy','local_cpy','l_clr','g_clr']:
         return False
     return True

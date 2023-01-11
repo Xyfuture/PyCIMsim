@@ -45,8 +45,11 @@ class InstFetch(BaseCoreCompo):
             self._pc_input.write(next_pc)
             self.if_id_port.write(inst_payload)
 
+        if pc % 1000 == 0:
+            print(f"pc:{pc} tick:{self.current_time}")
+
     def initialize(self):
-        self._pc_reg.init(10)
+        # self._pc_reg.init(None)
 
         self.if_stall.write(False)
         self._pc_input.write(0)
@@ -59,7 +62,7 @@ class InstFetch(BaseCoreCompo):
 
     def get_running_status(self):
         info = f"Core:{self._parent_compo.core_id} InstFetch> " \
-              f"pc:{self._pc_output.read()} inst:{self._inst_buffer[self._pc_output.read()]}"
+               f"pc:{self._pc_output.read()} inst:{self._inst_buffer[self._pc_output.read()]}"
         print(info)
 
         return info

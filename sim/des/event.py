@@ -1,7 +1,8 @@
+from sim.des.stime import Stime
 
 
 class Event:
-    def __init__(self,compo,handler,time):
+    def __init__(self, compo, handler, time: Stime):
         self.compo = compo
         self.handler = handler
         self.time = time
@@ -11,8 +12,6 @@ class Event:
             self.handler()
         else:
             raise ("not callable")
-
-
 
     def __eq__(self, other):
         return self.time == other.time
