@@ -1,4 +1,4 @@
-import queue
+import heapq
 from collections import OrderedDict
 import time
 
@@ -26,12 +26,39 @@ class EventWrapper:
         return self._event
 
 
+class PriorityQueue:
+    def __init__(self):
+        self._list = []
+
+    def top(self):
+        return heapq.nsmallest(1,self._list)[0]
+
+    def get(self):
+        return heapq.heappop(self._list)
+
+    def put(self, item):
+        heapq.heappush(self._list, item)
+
+    def merge_list(self, list_):
+        heapq.heapify(list_)
+        self._list = list(heapq.merge(self._list, list_))
+
+    def empty(self):
+        return len(self._list) == 0
+
+    def __len__(self):
+        return len(self._list)
+
+    def size(self):
+        return len(self._list)
+
+
 class Simulator:
 
     def __init__(self):
         self._ctime = Stime(0, 0)
         self._compos = list()
-        self._event_queue = queue.PriorityQueue()
+        self._event_queue = PriorityQueue()
 
         self._tmp_event_set = OrderedDict()
         self._event_cnt = 0
@@ -46,11 +73,14 @@ class Simulator:
         self._tmp_event_set[EventWrapper(event_)] = None
 
     def flush_queue_buffer(self):
+        tmp_list = []
         for ent in self._tmp_event_set.keys():
-            self._event_queue.put(ent.get_event())
+            tmp_list.append(ent.get_event())
+        self._event_queue.merge_list(tmp_list)
         self._tmp_event_set = OrderedDict()
 
     def run(self):
+        # in heapq more fast
         st = time.time()
         while not self._event_queue.empty():
             cur_event = self._event_queue.get()
@@ -59,7 +89,7 @@ class Simulator:
             cur_event.process()
 
             if not self._event_queue.empty():
-                if self._ctime != self._event_queue.queue[0].time:
+                if self._ctime != self._event_queue.top().time:
                     self.flush_queue_buffer()
             else:
                 self.flush_queue_buffer()
@@ -78,13 +108,13 @@ class Simulator:
         st = time.time()
         while not self._event_queue.empty():
 
-            if self._ctime == self._event_queue.queue[0].time:
+            if self._ctime == self._event_queue.top().time:
                 assert False
             else:
-                self._ctime = self._event_queue.queue[0].time
+                self._ctime = self._event_queue.top().time
 
-            for i in range(len(self._event_queue.queue)):
-                if self._ctime != self._event_queue.queue[0].time:
+            for i in range(self._event_queue.size()):
+                if self._ctime != self._event_queue.top().time:
                     break
                 cur_event = self._event_queue.get()
                 cur_event.process()

@@ -89,12 +89,12 @@ class UniWire(BaseWire):
         self._payload = payload
 
     def write(self, payload):
-        if self._writeable:
-            self.write_value(payload)
+        assert self._writeable
+        self.write_value(payload)
 
     def read(self):
-        if self._readable:
-            return self._payload
+        assert self._readable
+        return self._payload
 
     def add_callback(self, *args):
         self._callbacks.add_func(*args)
