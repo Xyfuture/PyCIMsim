@@ -72,8 +72,12 @@ class InstDecode(BaseCoreCompo):
     @registry(['_reg_output', 'reg_file_read_data', 'id_enable'])
     def decode_dispatch(self):
         if_payload = self._reg_output.read()
-        if not if_payload:
+
+        if not if_payload or not self.id_enable.read():
+            self.id_out.write(None)
+            self.jump_pc.write(None)
             return
+
         inst, pc = if_payload['inst'], if_payload['pc']
 
         rd_data, rs1_data, rs2_data = 0, 0, 0
@@ -102,11 +106,6 @@ class InstDecode(BaseCoreCompo):
         # 没有信息时为None
         jump_pc_payload = None
         decode_payload = None
-
-        if not self.id_enable.read():
-            self.id_out.write(decode_payload)
-            self.jump_pc.write(jump_pc_payload)
-            return
 
         op = inst['op']
         if op == 'seti':
@@ -276,7 +275,15 @@ class InstDecode(BaseCoreCompo):
         self._reg.init(None)
 
     def get_running_status(self):
-        info = f"Core:{self._parent_compo.core_id} InstDecode> pc:"
+        core_id = 0
+        if self._parent_compo:
+            core_id = self._parent_compo.core_id
+
+        inst_payload = self._reg_output.read()
+        if not inst_payload:
+            return ''
+        info = f"Core:{core_id} InstDecode> pc:{inst_payload['pc']} inst:{inst_payload['inst']}"
+        return info
 
 
 class DecodeForward(BaseCoreCompo):
@@ -300,7 +307,7 @@ class DecodeForward(BaseCoreCompo):
         }
 
     def initialize(self):
-        for k,v in self._map_port.items():
+        for k, v in self._map_port.items():
             v.write(None)
 
     @registry(['id_out'])

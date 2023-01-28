@@ -70,3 +70,13 @@ class Core(BaseCoreCompo):
     def set_inst_buffer(self, inst_buffer):
         self._inst_buffer = inst_buffer
         self.inst_fetch.set_inst_buffer(self._inst_buffer)
+
+    def get_running_status(self):
+        info = f'core id:{self.core_id} tick:{self.current_time}\n'
+        for compo in [self.inst_fetch, self.inst_decode, self.matrix, self.vector, self.transfer]:
+            info += compo.get_running_status() + '\n'
+        return info
+
+    def log_running_status(self):
+        info = self.get_running_status()
+        self._parent_compo.log_running_status(self.core_id,info)

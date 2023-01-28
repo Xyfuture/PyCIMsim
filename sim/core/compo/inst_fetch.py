@@ -41,12 +41,20 @@ class InstFetch(BaseCoreCompo):
         if jump_payload:
             next_pc = pc + jump_payload['offset']
 
-        if pc <= self._inst_buffer_len:
+        if pc < self._inst_buffer_len:
             self._pc_input.write(next_pc)
             self.if_id_port.write(inst_payload)
+        else:
+            self.if_id_port.write(None)
 
+        core_id = 0
+        if self._parent_compo:
+            core_id = self._parent_compo.core_id
         if pc % 1000 == 0:
-            print(f"pc:{pc} tick:{self.current_time}")
+            print(f"core id:{core_id} pc:{pc} tick:{self.current_time}")
+        # self._parent_compo.log_running_status()
+        if pc == len(self._inst_buffer):
+            print(f'Core id:{core_id} finish pc:{pc}')
 
     def initialize(self):
         # self._pc_reg.init(None)
@@ -61,8 +69,19 @@ class InstFetch(BaseCoreCompo):
         self._inst_buffer_len = len(self._inst_buffer)
 
     def get_running_status(self):
-        info = f"Core:{self._parent_compo.core_id} InstFetch> " \
-               f"pc:{self._pc_output.read()} inst:{self._inst_buffer[self._pc_output.read()]}"
-        print(info)
+        core_id = 0
+        if self._parent_compo:
+            core_id = self._parent_compo.core_id
+        if self._pc_output.read() >= len(self._inst_buffer):
+            return f"Core:{core_id} InstFetch> finish " \
+                   f"pc:{self._pc_output.read()} len:{len(self._inst_buffer)}"
+
+        info = f"Core:{core_id} InstFetch> " \
+                   f"pc:{self._pc_output.read()} inst:{self._inst_buffer[self._pc_output.read()]}"
 
         return info
+
+    def is_finish(self):
+        if self._pc_output.read() == len(self._inst_buffer):
+            return True
+        return False

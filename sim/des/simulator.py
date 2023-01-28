@@ -31,7 +31,7 @@ class PriorityQueue:
         self._list = []
 
     def top(self):
-        return heapq.nsmallest(1,self._list)[0]
+        return heapq.nsmallest(1, self._list)[0]
 
     def get(self):
         return heapq.heappop(self._list)
@@ -60,7 +60,7 @@ class Simulator:
         self._compos = list()
         self._event_queue = PriorityQueue()
 
-        self._tmp_event_set = OrderedDict()
+        self._tmp_event_set = set()
         self._event_cnt = 0
 
     def initialize(self):
@@ -70,14 +70,14 @@ class Simulator:
 
     def add_event(self, event_):
         # assert self._ctime != event_.time # 不能插入当前时间的事件
-        self._tmp_event_set[EventWrapper(event_)] = None
+        self._tmp_event_set.add(EventWrapper(event_))
 
     def flush_queue_buffer(self):
         tmp_list = []
-        for ent in self._tmp_event_set.keys():
+        for ent in self._tmp_event_set:
             tmp_list.append(ent.get_event())
         self._event_queue.merge_list(tmp_list)
-        self._tmp_event_set = OrderedDict()
+        self._tmp_event_set = set()
 
     def run(self):
         # in heapq more fast
@@ -152,3 +152,7 @@ class Simulator:
         if self._ctime.epsilon % 2 == 0:
             return self._ctime + (0, 1)
         return self._ctime + (0, 2)
+
+    @property
+    def event_cnt(self):
+        return self._event_cnt

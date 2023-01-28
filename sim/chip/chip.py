@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from sim.chip.memory.memory import Memory
 from sim.config.config import ChipConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
@@ -27,10 +29,23 @@ class Chip(BaseCoreCompo):
                 Core(sim, self, i, self.noc, self.config.core_config)
             )
 
+        self.running_status_dict = OrderedDict()
+
     def read_inst_buffer_list(self, inst_buffer_list):
         self.inst_buffer_list = inst_buffer_list
         for i, inst_buffer in enumerate(inst_buffer_list):
             self.core_list[i].set_inst_buffer(inst_buffer)
+            print(f"core id:{i} len:{len(inst_buffer)}")
 
     def initialize(self):
         pass
+
+    def get_running_status(self):
+        for core in self.core_list:
+            if not core.inst_fetch.is_finish():
+                print(core.get_running_status())
+
+    def log_running_status(self,core_id,status):
+        self.running_status_dict[core_id] = status
+        with open('./dump.txt','w') as f:
+            f.write(str(self.running_status_dict))

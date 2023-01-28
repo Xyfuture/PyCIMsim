@@ -80,8 +80,6 @@ class MatrixInfo(PayloadBase):
     relu: bool
 
 
-
-
 # 与寄存器堆产生的交互
 class RegFileReadRequest(PayloadBase):
     rs1_addr: int = 0

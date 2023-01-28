@@ -28,3 +28,9 @@ class PayloadBase:
             return True
         return False
     # 没有进行严格的check,但是有类型注解了,还算够用吧
+
+    def __str__(self):
+        tmp = ''
+        for k in self.__annotations__:
+            tmp += f'{k}:{self.__getattribute__(k)} '
+        return tmp

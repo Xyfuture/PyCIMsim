@@ -12,14 +12,6 @@ from sim.core.compo.register_files import RegisterFiles
 from sim.core.compo.scalar import ScalarUnit
 from sim.core.compo.controller import Controller
 
-# inst_buffer = [
-#     {'op': 'addi', 'rd_addr': 1, 'rs1_addr': 0, 'imm': 100},
-#     {'op': 'addi', 'rd_addr': 2, 'rs1_addr': 0, 'imm': 100},
-#     {'op': 'gemv'},
-#     {'op': 'add', 'rd_addr': 3, 'rs1_addr': 3, 'rs2_addr': 2},
-#     {'op': 'j', 'offset': -3},
-#     {'op': 'add', 'rd_addr': 3, 'rs1_addr': 1, 'rs2_addr': 2}
-# ]
 
 file_path = r'D:\code\test\core1.txt'
 inst_buffer = load_dict(file_path)
@@ -65,3 +57,5 @@ if __name__ == "__main__":
     sim.initialize()
     sim.run()
     # sim.new_run()
+
+    print(inst_fetch.get_running_status())

@@ -14,8 +14,8 @@ class BaseModule(BaseCompo):
         self._output_wires_dict = {}
         self._inner_wires_dict = {}
 
-        self._modules_dict = {}
-        self._registers_dict = {}
+        # self._modules_dict = {}
+        # self._registers_dict = {}
 
         # self.registry_sensitive()
         # 计算能耗
@@ -49,10 +49,10 @@ class BaseModule(BaseCompo):
             else:
                 self._inner_wires_dict[key] = value
 
-        elif isinstance(value, BaseRegister):
-            self._registers_dict[key] = value
-        elif isinstance(value, BaseModule):
-            self._modules_dict[key] = value
+        # elif isinstance(value, BaseRegister):
+        #     self._registers_dict[key] = value
+        # elif isinstance(value, BaseModule):
+        #     self._modules_dict[key] = value
 
         super(BaseModule, self).__setattr__(key, value)
 

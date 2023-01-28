@@ -47,3 +47,12 @@ class ScalarUnit(BaseCoreCompo):
 
     def initialize(self):
         self.reg_file_write.write(None)
+
+    def get_running_status(self):
+        core_id = 0
+        if self._parent_compo:
+            core_id = self._parent_compo.core_id
+
+        scalar_info = self._reg_output.read()
+        info = f"Core:{core_id} ScalarUnit> {scalar_info}"
+        return info

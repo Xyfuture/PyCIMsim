@@ -127,7 +127,7 @@ class TransferUnit(BaseCoreCompo):
         else:
             assert False
 
-        self._fsm_reg_output.write(new_fsm_payload)
+        self._fsm_reg_input.write(new_fsm_payload)
 
     @registry(['_fsm_reg_output'])
     def process_fsm_output(self):
@@ -184,7 +184,7 @@ class TransferUnit(BaseCoreCompo):
 
     def execute_sync(self, transfer_info: TransferInfo):
         start_core, end_core = transfer_info.sync_info['start_core'], transfer_info.sync_info['end_core']
-
+        # print(f"core id:{self._parent_compo.core_id} start sync pc:{transfer_info.pc} start_core:{start_core} end_core:{end_core}")
         # 初始化同步dict  发送自己开始的数据给其他的核
         for i in range(start_core, end_core + 1):
             self.sync_dict[i] = 0
@@ -242,7 +242,11 @@ class TransferUnit(BaseCoreCompo):
                     self.sync_cnt += 1
                     self.finish_execute()
         else:  # 当前如果不在运行sync指令 就直接跳过
-            assert False
+            # print(self._run_state)
+            # print(bus_payload)
+            # print(self._parent_compo.get_running_status())
+            # assert False
+            pass
         self.noc_interface.allow_receive()
 
     def execute_wait_core(self, transfer_info: TransferInfo):
@@ -279,10 +283,10 @@ class TransferUnit(BaseCoreCompo):
                 )
                 self.noc_interface.send(finish_wait_core_request, None)
             else:
-                self.wait_core_dict[bus_payload['src']] = state
+                self.wait_core_dict[bus_payload.src] = state
         elif sync_message.message == 'finish':
             assert self._run_state == 'wait_core'
-            assert self.wait_state <= bus_payload['state']
+            assert self.wait_state <= sync_message.state
 
             self.finish_execute()
 
@@ -401,7 +405,13 @@ class TransferUnit(BaseCoreCompo):
         self._finish_wire.write(True)
 
     def get_running_status(self):
-        print("Transfer> ")
+        core_id = 0
+        if self._parent_compo:
+            core_id = self._parent_compo.core_id
+
+        fsm_info = self._fsm_reg_output.read()
+        info = f"Core:{core_id} TransferUnit> {fsm_info}"
+        return info
 
 # 一些格式信息
 # {'src':1,'dst':2,'data_size':1,'op':'sync','message':'start/finish','sync_cnt':sync_cnt}

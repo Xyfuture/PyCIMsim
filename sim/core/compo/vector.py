@@ -172,3 +172,12 @@ class VectorUnit(BaseCoreCompo):
         # print(f'vector finish tick:{self.current_time}')
         self.vector_buffer.allow_receive()
         self._finish_wire.write(True)
+
+    def get_running_status(self):
+        core_id = 0
+        if self._parent_compo:
+            core_id = self._parent_compo.core_id
+
+        fsm_info = self._fsm_reg_output.read()
+        info = f"Core:{core_id} VectorUnit> {fsm_info}"
+        return info

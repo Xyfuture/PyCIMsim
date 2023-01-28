@@ -153,3 +153,12 @@ class MatrixUnit(BaseCoreCompo):
         # print(f'gemv finish tick:{self.current_time}')
         self.matrix_buffer.allow_receive()
         self._finish_wire.write(True)
+
+    def get_running_status(self):
+        core_id = 0
+        if self._parent_compo:
+            core_id = self._parent_compo.core_id
+
+        fsm_info = self._fsm_reg_output.read()
+        info = f"Core:{core_id} MatrixUnit> {fsm_info}"
+        return info
