@@ -1,5 +1,6 @@
 import heapq
 from collections import OrderedDict
+from ordered_set import OrderedSet
 import time
 
 from sim.des.stime import *
@@ -31,17 +32,13 @@ class PriorityQueue:
         self._list = []
 
     def top(self):
-        return heapq.nsmallest(1, self._list)[0]
+        return self._list[0]
 
     def get(self):
         return heapq.heappop(self._list)
 
     def put(self, item):
         heapq.heappush(self._list, item)
-
-    def merge_list(self, list_):
-        heapq.heapify(list_)
-        self._list = list(heapq.merge(self._list, list_))
 
     def empty(self):
         return len(self._list) == 0
@@ -60,7 +57,8 @@ class Simulator:
         self._compos = list()
         self._event_queue = PriorityQueue()
 
-        self._tmp_event_set = set()
+        # self._tmp_event_set = set()
+        self._tmp_event_set = OrderedSet()
         self._event_cnt = 0
 
     def initialize(self):
@@ -69,21 +67,27 @@ class Simulator:
         self.flush_queue_buffer()
 
     def add_event(self, event_):
-        # assert self._ctime != event_.time # 不能插入当前时间的事件
+        # assert self._ctime < event_.time # 不能插入当前时间的事件
+
+        # if self._ctime >= event_.time:
+        #     print(f"Add Event Error> current_time:{self._ctime} event_time:{event_.time}")
+        #     print(event_.handler)
         self._tmp_event_set.add(EventWrapper(event_))
 
     def flush_queue_buffer(self):
-        tmp_list = []
         for ent in self._tmp_event_set:
-            tmp_list.append(ent.get_event())
-        self._event_queue.merge_list(tmp_list)
-        self._tmp_event_set = set()
+            self._event_queue.put(ent.get_event())
+        # self._tmp_event_set = set()
+        self._tmp_event_set = OrderedSet()
 
     def run(self):
         # in heapq more fast
         st = time.time()
         while not self._event_queue.empty():
             cur_event = self._event_queue.get()
+            if self._ctime > cur_event.time:
+                print(f'Error> simulator time:{self._ctime} event time:{cur_event.time}')
+                print(f'Event> {cur_event.handler}\n')
             self._ctime = cur_event.time
 
             cur_event.process()

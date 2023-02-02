@@ -50,6 +50,10 @@ class MessageBus(BaseCoreCompo):
 
         times = ceil(data_size / self._config.bus_width)
 
+        if times <= 0:
+            print(f"Calc Times Error> times:{times} data_size:{data_size} width:{self._config.bus_width}")
+            print(f"BusPayload:{bus_payload}\n")
+
         if self._config:
             if self._config.bus_topology == 'shared':
                 self.add_dynamic_energy(self._config.energy * times)
@@ -64,6 +68,7 @@ class MessageBus(BaseCoreCompo):
 
                 hops = abs(src[0] - dst[0]) + abs(src[1] - dst[1])
                 self.add_dynamic_energy(self._config.energy * times * hops)
+                assert hops > 0
                 return self._config.latency * times * hops
         else:
             return 10

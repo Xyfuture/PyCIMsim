@@ -25,6 +25,9 @@ def convert(inst: dict):
     tmp = inst
     tmp['op'] = tmp['opcode']
 
+    if 'size' in inst:
+        inst['size'] = abs(inst['size'])
+
     if op == 'g2l':
         tmp = {
             'op': 'global_to_local', 'dst_addr': inst['dst'], 'src_addr': inst['src'],

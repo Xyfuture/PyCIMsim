@@ -31,8 +31,9 @@ t = Thread(target=print_info)
 
 sim.initialize()
 sim.run()
+# sim.new_run()
 
 print(sim.event_cnt)
 
 
-print(chip.get_running_status())
+# print(chip.get_running_status())

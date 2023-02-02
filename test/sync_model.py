@@ -120,8 +120,18 @@ class SyncCore:
             wait_state = message['info']['state']
             wait_src = message['src']
             # assert wait_src not in self.wait_core_dict
-            self.wait_core_dict[wait_src] = wait_state
-            self.activate_wait_core()
+
+            # self.activate_wait_core()
+            if self.state >= wait_state:
+                message = {
+                    'src': self.core_id, 'dst': wait_src, 'info': {
+                        'op': 'inc_state', 'status': 'finish'
+                    }
+                }
+                self.chip.forward_message_registry(message)
+            else:
+                self.wait_core_dict[wait_src] = wait_state
+
         elif op == 'inc_state':  # 其他节点发来 inc 本节点完成
             # assert self.core_state == 'wait_core'
             if self.core_state == 'wait_core':

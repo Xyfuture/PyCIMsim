@@ -35,7 +35,7 @@ class Chip(BaseCoreCompo):
         self.inst_buffer_list = inst_buffer_list
         for i, inst_buffer in enumerate(inst_buffer_list):
             self.core_list[i].set_inst_buffer(inst_buffer)
-            print(f"core id:{i} len:{len(inst_buffer)}")
+            # print(f"core id:{i} len:{len(inst_buffer)}")
 
     def initialize(self):
         pass

@@ -103,5 +103,4 @@ class SyncMessage(PayloadBase):
     op: str
     message: str
 
-    sync_cnt: Optional[int] = None  # for op == 'sync'
     state: Optional[int] = None  # for op == 'wait_core'
