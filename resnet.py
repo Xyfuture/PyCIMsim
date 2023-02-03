@@ -19,7 +19,7 @@ chip_config = ChipConfig(
 )
 chip = Chip(sim, chip_config)
 
-pkl_path = 'program/resnet18_only_sync.pkl'
+pkl_path = 'program/resnet18.pkl'
 with open(pkl_path, 'rb') as f:
     inst_list = pickle.load(f)
 
@@ -32,6 +32,8 @@ t = Thread(target=print_info)
 sim.initialize()
 sim.run()
 # sim.new_run()
+
+print(f"Chip Energy:{chip.total_energy}")
 
 print(sim.event_cnt)
 

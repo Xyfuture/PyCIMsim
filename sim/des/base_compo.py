@@ -9,6 +9,14 @@ class BaseCompo(metaclass=ABCMeta):
         self._sim = sim
         self._sim.add_compo(self)
         self._parent_compo = parent_compo
+        self._child_compo = []
+
+        #  双向链表
+        if parent_compo:
+            self._parent_compo.add_sub_compo(self)
+
+    def add_sub_compo(self,compo):
+        self._child_compo.append(compo)
 
     @property
     def sim(self):

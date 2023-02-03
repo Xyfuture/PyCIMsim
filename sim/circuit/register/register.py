@@ -8,10 +8,10 @@ from sim.des.utils import fl
 
 
 class RegNext(BaseRegister):
-    '''
+    """
     普通的寄存器，当输入数据有变化时，下个周期数据变化
     不带enable端口
-    '''
+    """
 
     def __init__(self, sim, compo):
         super(RegNext, self).__init__(sim, compo)

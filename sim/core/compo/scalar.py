@@ -25,9 +25,9 @@ class ScalarUnit(BaseCoreCompo):
     @registry(['id_scalar_port'])
     def update_reg(self):
         payload = self.id_scalar_port.read()
-        if payload:
-            if payload['ex'] == 'scalar':
-                self._reg_input.write(payload)
+        if not payload and (not payload['ex'] == 'scalar'):
+            return
+        self._reg_input.write(payload)
 
     @registry(['_reg_output'])
     def execute(self):
@@ -44,6 +44,8 @@ class ScalarUnit(BaseCoreCompo):
             rd_data = rs1_data * rs2_data
 
         self.reg_file_write.write({'rd_addr': rd_addr, 'rd_data': rd_data})
+
+        self.circuit_add_dynamic_energy(self._config.scalar_energy)
 
     def initialize(self):
         self.reg_file_write.write(None)

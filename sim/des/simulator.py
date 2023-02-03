@@ -13,8 +13,6 @@ class EventWrapper:
         self._event = ent
 
     def __hash__(self):
-        # tmp_str = str(self._event.handler) + str(self._event.time.tick) + str(self._event.time.epsilon) + str(
-        # self._event.compo)
         tmp_str = id(self._event.handler) + self._event.time.tick + self._event.time.epsilon
         return hash(tmp_str)
 
@@ -54,11 +52,11 @@ class Simulator:
 
     def __init__(self):
         self._ctime = Stime(0, 0)
-        self._compos = list()
+        self._compos = []
         self._event_queue = PriorityQueue()
 
         # self._tmp_event_set = set()
-        self._tmp_event_set = OrderedSet()
+        self._queue_buffer_set = OrderedSet()
         self._event_cnt = 0
 
     def initialize(self):
@@ -67,27 +65,22 @@ class Simulator:
         self.flush_queue_buffer()
 
     def add_event(self, event_):
-        # assert self._ctime < event_.time # 不能插入当前时间的事件
-
-        # if self._ctime >= event_.time:
-        #     print(f"Add Event Error> current_time:{self._ctime} event_time:{event_.time}")
-        #     print(event_.handler)
-        self._tmp_event_set.add(EventWrapper(event_))
+        assert self._ctime < event_.time  # 不能插入当前时间的事件
+        self._queue_buffer_set.add(EventWrapper(event_))
 
     def flush_queue_buffer(self):
-        for ent in self._tmp_event_set:
+        for ent in self._queue_buffer_set:
             self._event_queue.put(ent.get_event())
         # self._tmp_event_set = set()
-        self._tmp_event_set = OrderedSet()
+        self._queue_buffer_set = OrderedSet()
 
     def run(self):
         # in heapq more fast
         st = time.time()
         while not self._event_queue.empty():
             cur_event = self._event_queue.get()
-            if self._ctime > cur_event.time:
-                print(f'Error> simulator time:{self._ctime} event time:{cur_event.time}')
-                print(f'Event> {cur_event.handler}\n')
+            assert self._ctime <= cur_event.time
+
             self._ctime = cur_event.time
 
             cur_event.process()
@@ -100,38 +93,21 @@ class Simulator:
 
             self._event_cnt += 1
 
-            # if __debug__:
-            #     if self._event_cnt % 1000 == 0:
-            #         print(f"event cnt:{self._event_cnt}")
-        ed = time.time()
-        print(f"run simulate time {self.current_time}")
-        print(f"run time {ed - st}")
+            if __debug__:
+                self.get_process()
 
-    def new_run(self):
-        self._ctime = Stime(-1, -1)
-        st = time.time()
-        while not self._event_queue.empty():
-
-            if self._ctime == self._event_queue.top().time:
-                assert False
-            else:
-                self._ctime = self._event_queue.top().time
-
-            for i in range(self._event_queue.size()):
-                if self._ctime != self._event_queue.top().time:
-                    break
-                cur_event = self._event_queue.get()
-                cur_event.process()
-                self._event_cnt += 1
-
-            self.flush_queue_buffer()
         ed = time.time()
         print(f"run simulate time {self.current_time}")
         print(f"run time {ed - st}")
 
     def add_compo(self, compo: BaseCompo):
-        if isinstance(compo, BaseCompo):
-            self._compos.append(compo)
+        assert isinstance(compo, BaseCompo)
+        self._compos.append(compo)
+
+    def get_process(self,interval=0):
+        if interval and self._event_cnt % interval:
+            print(f"Simulator> Event Cnt:{self._event_cnt}")
+
 
     @property
     def current_time(self):

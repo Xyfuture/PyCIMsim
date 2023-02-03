@@ -104,14 +104,8 @@ class MessageInterface(BaseCompo):
         self._send_ready = True
 
     def receive(self, payload):
-        # self.make_event(lambda : self._process_receive(payload),self.next_handle_epsilon)
-        # self._process_receive(payload)
         if callable(self._receive_callback):
             self._receive_callback(payload)
-
-    # def _process_receive(self, payload):
-    #     self._receive_ready = False
-    #     self._receive_callback(payload)
 
     def send(self, payload, callback):
         # assert 'dst' in payload and 'data_size' in payload

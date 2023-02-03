@@ -1,3 +1,4 @@
+from sim.circuit.module.base_module import EnergyLogger
 from sim.circuit.module.registry import registry
 from sim.circuit.register.register import RegEnable
 from sim.circuit.wire.wire import InWire, UniWire, OutWire
@@ -47,18 +48,19 @@ class InstFetch(BaseCoreCompo):
         else:
             self.if_id_port.write(None)
 
-        core_id = 0
-        if self._parent_compo:
-            core_id = self._parent_compo.core_id
-        if pc % 1000 == 0:
-            print(f"core id:{core_id} pc:{pc} tick:{self.current_time}")
-        # self._parent_compo.log_running_status()
-        if pc == len(self._inst_buffer):
+        if self.is_finish():
+            core_id = 0
+            if self._parent_compo:
+                core_id = self._parent_compo.core_id
             print(f'Core id:{core_id} finish pc:{pc}')
 
-    def initialize(self):
-        # self._pc_reg.init(None)
+        # 目前仅记录动态功耗，静态的可以直接算出来
+        self.circuit_add_dynamic_energy(self._config.inst_fetch_energy)
 
+        if __debug__:
+            self.get_process(10000)
+
+    def initialize(self):
         self.if_stall.write(False)
         self._pc_input.write(0)
 
@@ -72,12 +74,12 @@ class InstFetch(BaseCoreCompo):
         core_id = 0
         if self._parent_compo:
             core_id = self._parent_compo.core_id
-        if self._pc_output.read() >= len(self._inst_buffer):
+        if self.is_finish():
             return f"Core:{core_id} InstFetch> finish " \
                    f"pc:{self._pc_output.read()} len:{len(self._inst_buffer)}"
 
         info = f"Core:{core_id} InstFetch> " \
-                   f"pc:{self._pc_output.read()} inst:{self._inst_buffer[self._pc_output.read()]}"
+               f"pc:{self._pc_output.read()} inst:{self._inst_buffer[self._pc_output.read()]}"
 
         return info
 
@@ -85,3 +87,13 @@ class InstFetch(BaseCoreCompo):
         if self._pc_output.read() == len(self._inst_buffer):
             return True
         return False
+
+    def get_process(self, interval=1000):
+        if interval:  # not zero
+            core_id = 0
+            if self._parent_compo:
+                core_id = self._parent_compo.core_id
+
+            pc = self._pc_output.read()
+            if pc % interval == 0:
+                print(f"Core id:{core_id} pc:{pc} tick:{self.current_time}")

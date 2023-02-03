@@ -4,11 +4,12 @@ from sim.circuit.register.base_register import BaseRegister
 
 from sim.circuit.wire.base_wire import BaseWire
 from sim.des.base_compo import BaseCompo
+from sim.des.stime import Stime
 
 
 class BaseModule(BaseCompo):
     def __init__(self, sim, compo):
-        super(BaseModule, self).__init__(sim,compo)
+        super(BaseModule, self).__init__(sim, compo)
 
         self._input_wires_dict = {}
         self._output_wires_dict = {}
@@ -22,9 +23,18 @@ class BaseModule(BaseCompo):
         self._static_energy = 0
         self._dynamic_energy = 0
 
+        self._energy_logger = EnergyLogger(self)
+
     @property
     def total_energy(self):
-        return self._static_energy + self._dynamic_energy
+        child_compo_energy = 0
+        for compo in self._child_compo:
+            if isinstance(compo,BaseModule):
+                child_compo_energy += compo.total_energy
+        return self._static_energy + self._dynamic_energy + child_compo_energy
+
+    def circuit_add_dynamic_energy(self, energy):
+        self._energy_logger.add_dynamic_energy(energy)
 
     def add_dynamic_energy(self, energy):
         self._dynamic_energy += energy
@@ -64,3 +74,15 @@ class BaseModule(BaseCompo):
         for k in self._output_wires_dict:
             if k in other._input_wires_dict:
                 self._output_wires_dict[k] >> other._input_wires_dict[k]
+
+
+class EnergyLogger:
+    def __init__(self,compo:BaseModule):
+        self.last_record_time = Stime(0, 0)
+        self.compo:BaseModule = compo
+
+    def add_dynamic_energy(self,energy):
+        if self.last_record_time.tick != self.compo.current_time.tick:
+            self.compo.add_dynamic_energy(energy)
+            self.last_record_time = self.compo.current_time
+

@@ -58,37 +58,6 @@ class VectorUnit(BaseCoreCompo):
         else:
             return 10
 
-    # @registry(['_reg_head_output', 'finish_wire'])
-    # def check_stall_status(self):
-    #     reg_head_payload = self._reg_head_output.read()
-    #     finish_info = self.finish_wire.read()
-    #
-    #     data_payload, idle = reg_head_payload['data_payload'], reg_head_payload['status']
-    #
-    #     new_idle_status = True
-    #     trigger_status = False
-    #     stall_status = False
-    #
-    #     if idle:
-    #         if data_payload:
-    #             if data_payload['ex'] == 'matrix':
-    #                 new_idle_status = False
-    #                 trigger_status = True
-    #                 stall_status = True
-    #     else:
-    #         if finish_info:
-    #             new_idle_status = True
-    #             trigger_status = False
-    #             stall_status = False
-    #         else:
-    #             new_idle_status = False
-    #             trigger_status = False
-    #             stall_status = True
-    #
-    #     self._status_input.write(new_idle_status)
-    #     self.trigger_input.write(trigger_status)
-    #     self.vector_busy.write(stall_status)
-
     @registry(['_fsm_reg_output', '_finish_wire', 'id_vector_port'])
     def gen_fsm_input(self):
         fsm_payload: VectorFSMPayload = self._fsm_reg_output.read()

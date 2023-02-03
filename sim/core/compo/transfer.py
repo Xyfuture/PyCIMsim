@@ -163,6 +163,8 @@ class TransferUnit(BaseCoreCompo):
         else:
             self.execute_memory(transfer_info)
 
+        self.circuit_add_dynamic_energy(self._config.transfer_energy)
+
     def execute_sync(self, transfer_info: TransferInfo):
         start_core, end_core = transfer_info.sync_info['start_core'], transfer_info.sync_info['end_core']
         self.is_sync_master_core = (start_core == self.core_id)

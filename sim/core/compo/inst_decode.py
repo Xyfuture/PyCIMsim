@@ -242,6 +242,8 @@ class InstDecode(BaseCoreCompo):
         self.id_out.write(decode_payload)
         self.jump_pc.write(jump_pc_payload)
 
+        self.circuit_add_dynamic_energy(self._config.inst_decode_energy)
+
     @registry(['_reg_output', 'matrix_busy', 'vector_busy', 'transfer_busy'])
     def check_stall(self):
         inst_payload = self._reg_output.read()
@@ -251,16 +253,6 @@ class InstDecode(BaseCoreCompo):
         matrix_busy_payload = self.matrix_busy.read()
         vector_busy_payload = self.vector_busy.read()
         transfer_busy_payload = self.transfer_busy.read()
-
-        # inst = inst_payload['inst']
-        # op = inst['op']
-        # stall_info = False
-        # if op in self.matrix_inst and matrix_busy_payload:
-        #     stall_info = True
-        # elif op in self.vector_inst and vector_busy_payload:
-        #     stall_info = True
-        # elif op in self.transfer_inst and transfer_busy_payload:
-        #     stall_info = True
 
         stall_info = matrix_busy_payload or vector_busy_payload or transfer_busy_payload
 
@@ -281,7 +273,7 @@ class InstDecode(BaseCoreCompo):
 
         inst_payload = self._reg_output.read()
         if not inst_payload:
-            return ''
+            return f"Core:{core_id} InstDecode> None"
         info = f"Core:{core_id} InstDecode> pc:{inst_payload['pc']} inst:{inst_payload['inst']}"
         return info
 
