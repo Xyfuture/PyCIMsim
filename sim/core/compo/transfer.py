@@ -10,6 +10,7 @@ from sim.core.compo.connection.payloads import TransferInfo, BusPayload, MemoryR
 
 from sim.core.compo.message_bus import MessageInterface
 from sim.core.utils.payload.base import PayloadBase
+from sim.core.utils.pfc import PerformanceCounter
 from sim.des.stime import Stime
 from sim.network.simple.switch import SwitchInterface
 
@@ -52,6 +53,9 @@ class TransferUnit(BaseCoreCompo):
 
         self.registry_sensitive()
 
+        if __debug__:
+            self.pfc = PerformanceCounter(self)
+
     def initialize(self):
         self._fsm_reg.init(TransferFSMPayload(status='idle'))
         self._finish_wire.init(False)
@@ -89,20 +93,6 @@ class TransferUnit(BaseCoreCompo):
         else:
             assert False
 
-        # if self.core_id == 12:
-        #     print('in gen fsm input>\n' + f'time:{self.current_time}\n' +
-        #           f'old fsm:{fsm_payload}\n' +
-        #           f'id_transfer_port:{new_transfer_info}\n' +
-        #           f'new fsm:{new_fsm_payload}')
-        #
-        #     # if self.current_time == Stime(570880,23):
-        #     #     print('here')
-        #
-        #     # if self.current_time == Stime(570881,3):
-        #     print(f'input wire> read {self._fsm_reg_input.force_read()}\n'+
-        #           f'reg> \n'
-        #           f'current_payload: {self._fsm_reg._payload}\n'+
-        #           f'update_time: {self._fsm_reg._update_time}\n')
         self._fsm_reg_input.write(new_fsm_payload)
 
     @registry(['_fsm_reg_output'])
@@ -144,15 +134,14 @@ class TransferUnit(BaseCoreCompo):
     # 发射指令
     @registry(['func_trigger'])
     def process(self):
-        # reg_head_payload = self._reg_head_output.read()
-        # data_payload = reg_head_payload['data_payload']
+        if __debug__:
+            self.pfc.begin()
+
+
         transfer_info: TransferInfo = self._fsm_reg_output.read().transfer_info
 
         op = transfer_info.op
         self._run_state = op
-
-        # if self.core_id == 12:
-        #     print(self._parent_compo.get_running_status())
 
         if op == 'sync':
             self.execute_sync(transfer_info)
@@ -381,7 +370,9 @@ class TransferUnit(BaseCoreCompo):
             assert False
 
     def finish_execute(self):
-        # print("core_id:{} finish sync".format(self.core_id))
+        if __debug__:
+            self.pfc.finish()
+
         self._run_state = 'idle'
         self._finish_wire.write(True)
 

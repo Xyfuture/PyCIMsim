@@ -11,6 +11,7 @@ from sim.core.compo.connection.payloads import MatrixInfo, MemoryRequest, BusPay
 
 from sim.core.compo.message_bus import MessageInterface
 from sim.core.utils.payload.base import PayloadBase
+from sim.core.utils.pfc import PerformanceCounter
 
 
 class MatrixFSMPayload(PayloadBase):
@@ -24,11 +25,6 @@ class MatrixUnit(BaseCoreCompo):
         self._config = config
 
         self.id_matrix_port = InWire(UniWire, sim, self)
-
-        # self._reg_head = RegSustain(sim)
-        # self._status_input = UniWire(self)
-        # self._reg_head_output = UniWire(self)
-        # self._reg_head.connect(self.id_matrix_port, self._status_input, self._reg_head_output)
 
         self._fsm_reg = RegNext(sim, self)
         self._fsm_reg_input = UniWire(sim, self)
@@ -45,6 +41,9 @@ class MatrixUnit(BaseCoreCompo):
 
         self.registry_sensitive()
 
+        if __debug__:
+            self.pfc = PerformanceCounter(self)
+
     def initialize(self):
         self._fsm_reg.init(MatrixFSMPayload(  # 初始化为None会报错，需要初始化为MatrixFSMPayload
             matrix_info=None, status='idle'
@@ -54,12 +53,10 @@ class MatrixUnit(BaseCoreCompo):
         self.matrix_busy.write(False)
 
     def calc_compute_latency(self, matrix_info: MatrixInfo):
-        if self._config:
-            pe_num = matrix_info.pe_assign[1][0] * matrix_info.pe_assign[1][1]
-            self.add_dynamic_energy(self._config.matrix_energy_per_pe * pe_num)
-            return self._config.matrix_latency
-        else:
-            return 1000
+        pe_num = matrix_info.pe_assign[1][0] * matrix_info.pe_assign[1][1]
+        self.add_dynamic_energy(self._config.matrix_energy_per_pe * pe_num)
+        return self._config.matrix_latency
+
 
     @registry(['_fsm_reg_output', '_finish_wire', 'id_matrix_port'])
     def gen_fsm_input(self):
@@ -115,6 +112,10 @@ class MatrixUnit(BaseCoreCompo):
 
     @registry(['func_trigger'])
     def process(self):
+
+        if __debug__:
+            self.pfc.begin()
+
         fsm_payload = self._fsm_reg_output.read()
         matrix_info: MatrixInfo = fsm_payload.matrix_info
 
@@ -150,7 +151,9 @@ class MatrixUnit(BaseCoreCompo):
         self.make_event(f, self.current_time + latency)
 
     def finish_execute(self):
-        # print(f'gemv finish tick:{self.current_time}')
+        if __debug__:
+            self.pfc.finish()
+
         self.matrix_buffer.allow_receive()
         self._finish_wire.write(True)
 
