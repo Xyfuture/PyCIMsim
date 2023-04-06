@@ -4,7 +4,7 @@ from sim.des.stime import Stime
 
 class PerformanceCounter:
     def __init__(self,compo:BaseCoreCompo):
-        self._compo = BaseCoreCompo
+        self._compo = compo
         self._total_ticks = 0
         self.start_time = Stime(0,0)
         self.trigger = False
