@@ -49,3 +49,10 @@ class Chip(BaseCoreCompo):
         self.running_status_dict[core_id] = status
         with open('./dump.txt','w') as f:
             f.write(str(self.running_status_dict))
+
+    def get_performance_counter(self):
+        if not __debug__:
+            return
+        for core in self.core_list:
+            # if not core.inst_fetch.is_finish():
+          print(core.get_performance_counter())

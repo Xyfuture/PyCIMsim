@@ -80,3 +80,12 @@ class Core(BaseCoreCompo):
     def log_running_status(self):
         info = self.get_running_status()
         self._parent_compo.log_running_status(self.core_id,info)
+
+    def get_performance_counter(self):
+        if __debug__:
+            info = f'core id:{self.core_id} >\n' \
+                   f'Martix:   {self.matrix.pfc.get_ticks()}\n' \
+                   f'Vector:   {self.vector.pfc.get_ticks()}\n' \
+                   f'Transfer: {self.transfer.pfc.get_ticks()}'
+            return info
+        return 'not in debug mode'

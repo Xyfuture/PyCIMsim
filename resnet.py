@@ -37,5 +37,7 @@ print(f"Chip Energy:{chip.total_energy}")
 
 print(sim.event_cnt)
 
+chip.get_performance_counter()
+
 
 # print(chip.get_running_status())
