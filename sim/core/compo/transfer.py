@@ -134,14 +134,14 @@ class TransferUnit(BaseCoreCompo):
     # 发射指令
     @registry(['func_trigger'])
     def process(self):
-        if __debug__:
-            self.pfc.begin()
-
-
         transfer_info: TransferInfo = self._fsm_reg_output.read().transfer_info
 
         op = transfer_info.op
         self._run_state = op
+
+        if __debug__:
+            self.pfc.begin(op)
+
 
         if op == 'sync':
             self.execute_sync(transfer_info)
@@ -370,8 +370,9 @@ class TransferUnit(BaseCoreCompo):
             assert False
 
     def finish_execute(self):
+
         if __debug__:
-            self.pfc.finish()
+            self.pfc.finish(self._run_state)
 
         self._run_state = 'idle'
         self._finish_wire.write(True)
