@@ -84,8 +84,8 @@ class Core(BaseCoreCompo):
     def get_performance_counter(self):
         if __debug__:
             info = f'core id:{self.core_id} >\n' \
-                   f'Martix:   {self.matrix.pfc.get_ticks()}\n' \
-                   f'Vector:   {self.vector.pfc.get_ticks()}\n' \
-                   f'Transfer: {self.transfer.pfc.get_ticks()}'
+                   f'Martix:   {self.matrix.pfc.get_all_ticks()}\n' \
+                   f'Vector:   {self.vector.pfc.get_all_ticks()}\n' \
+                   f'Transfer: {self.transfer.pfc.get_all_ticks()}'
             return info
         return 'not in debug mode'
