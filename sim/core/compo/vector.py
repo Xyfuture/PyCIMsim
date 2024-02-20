@@ -50,7 +50,7 @@ class VectorUnit(BaseCoreCompo):
         self.vector_busy.write(False)
 
     def calc_compute_latency(self, vector_info: VectorInfo):
-        times = ceil(vector_info.vec_len / self._config.vector_width)
+        times = ceil(vector_info.len / self._config.vector_width)
         self.add_dynamic_energy(self._config.vector_energy * times)
         return self._config.vector_latency * times
 
@@ -112,7 +112,7 @@ class VectorUnit(BaseCoreCompo):
         fsm_payload = self._fsm_reg_output.read()
         vector_info: VectorInfo = fsm_payload.vector_info
 
-        input_vec_size = ceil(vector_info.vec_len * self._config.input_precision / 8) * 2  # Bytes
+        input_vec_size = ceil(vector_info.len * self._config.input_precision / 8) * 2  # Bytes
 
         # 暂时设计为一次读出所有的结果
         memory_read_request = BusPayload(
@@ -127,7 +127,7 @@ class VectorUnit(BaseCoreCompo):
         vector_info: VectorInfo = self._fsm_reg_output.read().vector_info
         latency = self.calc_compute_latency(vector_info)
 
-        output_vec_size = ceil(vector_info.vec_len * self._config.input_precision / 8)  # Bytes
+        output_vec_size = ceil(vector_info.len * self._config.input_precision / 8)  # Bytes
         memory_write_request = BusPayload(
             src='vector', dst='buffer', data_size=output_vec_size,
             payload=MemoryRequest(access_type='write', data_size=output_vec_size)

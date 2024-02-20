@@ -23,41 +23,17 @@ class MemoryReadValue(PayloadBase):
     data: Optional[Any] = None
 
 
-class ScalarInfo(PayloadBase):
-    op: str
-    pc: int
-    ex: str = 'scalar'
-
-    rs1_data: int
-    rs2_data: int
-    rd_addr: int
-
-
+# decode 之后的结果
 class VectorInfo(PayloadBase):
     op: str
     pc: int
     ex: str = 'vector'
 
-    out_addr: int
-    in1_addr: int
-    in2_addr: Optional[int] = None
-    vec_len: int = 0
-    act_type: Optional[str] = None
-    imm: Optional[int] = None
-
-
-class SyncInfo(PayloadBase):
-    start_core: Optional[int] = None
-    end_core: Optional[int] = None
-
-    state: Optional[int] = None
-    core_id: Optional[int] = None
-
-
-class MemAccessInfo(PayloadBase):
     dst_addr: int
-    src_addr: Optional[int] = None
-    data_size: int  # bytes
+    src1_addr: int
+    src2_addr: Optional[int] = None
+    len: int
+    imm: Optional[int] = None
 
 
 class TransferInfo(PayloadBase):
@@ -65,8 +41,10 @@ class TransferInfo(PayloadBase):
     pc: int
     ex: str = 'transfer'
 
-    sync_info: Optional[SyncInfo] = None
-    mem_access_info: Optional[MemAccessInfo] = None
+    dst_addr: Optional[int] = None
+    src1_addr: Optional[int] = None
+    len: int
+    imm: Optional[int] = None  # send/recv dst/src core id
 
 
 class MatrixInfo(PayloadBase):
@@ -74,33 +52,9 @@ class MatrixInfo(PayloadBase):
     pc: int
     ex: str = 'matrix'
 
-    out_addr: int
-    vec_addr: int
-    pe_assign: Tuple[Tuple[int, int], Tuple[int, int]]
-    relu: bool
-
-
-# 与寄存器堆产生的交互
-class RegFileReadRequest(PayloadBase):
-    rs1_addr: int = 0
-    rs2_addr: int = 0
-    rd_addr: int = 0
-
-
-class RegFileReadValue(PayloadBase):
-    rs1_data: int = 0
-    rs2_data: int = 0
-    rd_data: int = 0
-
-
-class RegFileWriteRequest(PayloadBase):
-    rd_addr: int = 0
-    rd_value: int = 0
-
-
-# 同步时Sync指令传输的信息
-class SyncMessage(PayloadBase):
-    op: str
-    message: str
-
-    state: Optional[int] = None  # for op == 'wait_core'
+    dst_addr: int
+    src1_addr: int
+    group_id: int
+    xbar_cnt: int
+    input_len: int
+    output_len: int

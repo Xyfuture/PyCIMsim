@@ -53,8 +53,8 @@ class MatrixUnit(BaseCoreCompo):
         self.matrix_busy.write(False)
 
     def calc_compute_latency(self, matrix_info: MatrixInfo):
-        pe_num = matrix_info.pe_assign[1][0] * matrix_info.pe_assign[1][1]
-        self.add_dynamic_energy(self._config.matrix_energy_per_pe * pe_num)
+        xbar_cnt = matrix_info.xbar_cnt
+        self.add_dynamic_energy(self._config.matrix_energy_per_pe * xbar_cnt)
         return self._config.matrix_latency
 
 
@@ -116,17 +116,18 @@ class MatrixUnit(BaseCoreCompo):
         if __debug__:
             self.pfc.begin()
 
+        # 先期工作,读取数据
+
         fsm_payload = self._fsm_reg_output.read()
         matrix_info: MatrixInfo = fsm_payload.matrix_info
 
-        # 计算需要的数据量
-        input_vec_size = ceil(matrix_info.pe_assign[1][0] * self._config.xbar_size[0]
-                              * self._config.input_precision / 8)  # Bytes not bits
+        # 读取vector的大小
+        input_vec_size = matrix_info.input_len
+        input_vec_addr = matrix_info.src1_addr
 
-        # memory_read_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'read'}
         memory_read_request = BusPayload(
             src='matrix', dst='buffer', data_size=1,  # 是请求的大小
-            payload=MemoryRequest(access_type='read', addr=matrix_info.vec_addr, data_size=input_vec_size)
+            payload=MemoryRequest(access_type='read', addr=input_vec_addr, data_size=input_vec_size)
         )
 
         self.matrix_buffer.send(memory_read_request, None)
@@ -135,15 +136,13 @@ class MatrixUnit(BaseCoreCompo):
     def execute_gemv(self, payload):
         matrix_info: MatrixInfo = self._fsm_reg_output.read().matrix_info
 
-        output_vec_size = ceil(matrix_info.pe_assign[1][1] * self._config.xbar_size[1] * self._config.device_precision
-                               * (self._config.input_precision / 8) / self._config.weight_precision)  # Bytes
+        output_vec_size = matrix_info.output_len
 
         latency = self.calc_compute_latency(matrix_info)
-        # memory_write_request = {'src': 'matrix', 'dst': 'buffer', 'data_size': 128, 'access_type': 'write'}
 
         memory_write_request = BusPayload(
             src='matrix', dst='buffer', data_size=output_vec_size,
-            payload=MemoryRequest(access_type='write', data_size=output_vec_size, addr=matrix_info.out_addr)
+            payload=MemoryRequest(access_type='write', data_size=output_vec_size, addr=matrix_info.dst_addr)
         )
 
         f = lambda: self.matrix_buffer.send(memory_write_request, self.finish_execute)
