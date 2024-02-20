@@ -7,8 +7,6 @@ from sim.core.compo.transfer import TransferUnit
 from sim.core.compo.vector import VectorUnit
 from sim.core.compo.inst_fetch import InstFetch
 from sim.core.compo.inst_decode import InstDecode, DecodeForward
-from sim.core.compo.register_files import RegisterFiles
-from sim.core.compo.scalar import ScalarUnit
 from sim.core.compo.controller import Controller
 from sim.network.simple.switch import Network
 
@@ -25,9 +23,7 @@ class Core(BaseCoreCompo):
         self.inst_decode = InstDecode(sim, self, self._config)
         self.forward = DecodeForward(sim, self)
         self.ctrl = Controller(sim, self)
-        self.reg_file = RegisterFiles(sim, self, self._config)
 
-        self.scalar = ScalarUnit(sim, self, self._config)
         self.vector = VectorUnit(sim, self, self._config)
         self.matrix = MatrixUnit(sim, self, self._config)
         self.transfer = TransferUnit(sim, self, self.core_id, self._config)
@@ -39,15 +35,11 @@ class Core(BaseCoreCompo):
         self.inst_fetch // self.ctrl
 
         self.inst_decode // self.forward
-        self.inst_decode // self.reg_file
         self.inst_decode // self.ctrl
 
-        self.forward // self.scalar
         self.forward // self.matrix
         self.forward // self.vector
         self.forward // self.transfer
-
-        self.scalar // self.reg_file
 
         self.matrix // self.inst_decode
         self.vector // self.inst_decode
@@ -79,7 +71,7 @@ class Core(BaseCoreCompo):
 
     def log_running_status(self):
         info = self.get_running_status()
-        self._parent_compo.log_running_status(self.core_id,info)
+        self._parent_compo.log_running_status(self.core_id, info)
 
     def get_performance_counter(self):
         if __debug__:

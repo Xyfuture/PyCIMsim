@@ -98,7 +98,7 @@ class Simulator:
 
         ed = time.time()
         print(f"run simulate time {self.current_time}")
-        print(f"run time {ed - st}")
+        print(f"run time {ed - st} seconds")
 
     def add_compo(self, compo: BaseCompo):
         assert isinstance(compo, BaseCompo)
