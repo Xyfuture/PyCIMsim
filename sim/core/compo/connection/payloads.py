@@ -58,3 +58,11 @@ class MatrixInfo(PayloadBase):
     xbar_cnt: int
     input_len: int
     output_len: int
+
+
+class InterCoreMessage(PayloadBase):
+    sender_id: int
+    receiver_id: int
+
+    is_sender: bool
+    status: str  # sender_ready receiver_ready send_data

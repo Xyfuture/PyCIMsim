@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union, Generator
 
 from sim.circuit.hybrid.trigger import Trigger
 from sim.circuit.module.registry import registry
@@ -6,7 +6,7 @@ from sim.circuit.wire.wire import InWire, UniWire, OutWire
 from sim.circuit.register.register import RegNext
 from sim.config.config import CoreConfig
 from sim.core.compo.base_core_compo import BaseCoreCompo
-from sim.core.compo.connection.payloads import TransferInfo, BusPayload, MemoryRequest, SyncMessage
+from sim.core.compo.connection.payloads import TransferInfo, BusPayload, MemoryRequest, SyncMessage, InterCoreMessage
 
 from sim.core.compo.message_bus import MessageInterface
 from sim.core.utils.payload.base import PayloadBase
@@ -50,6 +50,12 @@ class TransferUnit(BaseCoreCompo):
 
         self.state_value = 0
         self.wait_core_dict = {}  # core_id:value 其他核等待本核
+
+        self.recv_waiting_sender_dict = {}
+
+        self.cur_send_coroutine: Union[Generator, None] = None
+        self.cur_recv_coroutine: Union[Generator, None] = None
+        self.cur_memory_coroutine: Union[Generator, None] = None
 
         self.registry_sensitive()
 
@@ -142,7 +148,6 @@ class TransferUnit(BaseCoreCompo):
         if __debug__:
             self.pfc.begin(op)
 
-
         if op == 'sync':
             self.execute_sync(transfer_info)
         elif op == 'wait_core':
@@ -185,7 +190,7 @@ class TransferUnit(BaseCoreCompo):
     def master_core_finish_sync(self):
         for core in self.sync_dict:
             finish_sync_request = BusPayload(
-                src=self.core_id, dst=core,data_size=1,
+                src=self.core_id, dst=core, data_size=1,
                 payload=SyncMessage(
                     op='sync', message='finish'
                 )
@@ -376,6 +381,120 @@ class TransferUnit(BaseCoreCompo):
 
         self._run_state = 'idle'
         self._finish_wire.write(True)
+
+    def process_send(self, transfer_info: TransferInfo):
+        op = transfer_info.op
+        assert op == 'send'
+
+        receiver_core_id = transfer_info.imm
+
+        sender_ready_request = BusPayload(
+            src=self.core_id, dst=receiver_core_id, data_size=1,
+            payload=InterCoreMessage(
+                sender_id=self.core_id, receiver_id=receiver_core_id,
+                is_sender=True, status='sender_ready'
+            )
+        )
+        self.noc_interface.send(sender_ready_request, None)
+
+        yield ('sender ready req send,'
+               'wait for receiver ready')
+
+        # 读取本地内存
+        local_read_request = BusPayload(
+            src='transfer', dst='buffer', data_size=transfer_info.len,
+            payload=MemoryRequest(
+                access_type='read', addr=transfer_info.src1_addr,
+                data_size=transfer_info.len,
+            )
+        )
+        self.transfer_buffer.send(local_read_request, None)
+
+        yield ('read local memory req send'
+               'wait for read finish')
+
+        # 发送数据到其他核心
+        send_data_request = BusPayload(
+            src=self.core_id, dst=receiver_core_id, data_size=transfer_info.len,
+            payload=InterCoreMessage(
+                sender_id=self.core_id, receiver_id=receiver_core_id,
+                is_sender=True, status='send_data'
+            )
+        )
+
+        self.noc_interface.send(send_data_request, self.finish_execute)
+
+    def noc_send_handler(self, transfer_info: TransferInfo, bus_payload: BusPayload):
+        inter_core_message: InterCoreMessage = bus_payload.payload
+
+        sender_core_id, receiver_core_id = inter_core_message.sender_id, inter_core_message.receiver_id
+        assert sender_core_id == self.core_id
+        assert receiver_core_id == transfer_info.imm
+
+        # 检查receiver是正确的，并已经就绪，切换回 process send进程
+        if receiver_core_id == transfer_info.imm and \
+                inter_core_message.status == 'receiver_ready':
+
+            next(self.cur_send_coroutine)
+        else:
+            assert False
+
+    def process_receive(self, transfer_info: TransferInfo):
+        #TODO 有bug 关于 allow receive的
+
+        op = transfer_info.op
+        assert op == 'recv'
+
+        sender_core_id = transfer_info.imm
+
+        if sender_core_id in self.recv_waiting_sender_dict:
+            # sender 已经在等待receiver 了，直接发送 receiver ready 信号
+            receiver_ready_request = BusPayload(
+                src=self.core_id, dst=sender_core_id, data_size=transfer_info.len,
+                payload=InterCoreMessage(
+                    sender_id=sender_core_id, receiver_id=self.core_id,
+                    is_sender=False, status='receiver_ready'
+                )
+            )
+
+            del self.recv_waiting_sender_dict[sender_core_id]
+
+            self.noc_interface.send(receiver_ready_request, None)
+
+        yield 'wait for sender send data '
+
+        # 收到sender 发送的数据，写入到内存中
+        local_memory_write_request = BusPayload(
+            src='transfer', dst='buffer', data_size=transfer_info.len,
+            payload=MemoryRequest(
+                access_type='write', addr=transfer_info.dst_addr,
+                data_size=transfer_info.len,
+            )
+        )
+
+        self.transfer_buffer.send(local_memory_write_request, self.finish_execute())
+
+    def noc_receive_handler(self,transfer_info:TransferInfo,bus_payload:BusPayload):
+        inter_core_message:InterCoreMessage = bus_payload.payload
+
+        sender_core_id, receiver_core_id = inter_core_message.sender_id, inter_core_message.receiver_id
+        assert sender_core_id == transfer_info.imm
+        assert receiver_core_id == self.core_id
+
+        if sender_core_id == transfer_info.imm:
+            # 正好在等待这个核
+            if inter_core_message.status == 'sender_ready':
+                # sender后执行,发送receiver就绪
+                receiver_ready_request =
+            elif inter_core_message.status == 'send_data':
+                # 双方都就绪,对面发送数据
+
+        else:
+            self.recv_waiting_sender_dict.setdefault(sender_core_id)
+
+
+    def process_memory(self):
+        pass
 
     def get_running_status(self):
         core_id = 0
