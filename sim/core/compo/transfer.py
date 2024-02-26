@@ -120,22 +120,60 @@ class TransferUnit(BaseCoreCompo):
     # local_buffer receive
     @registry(['transfer_buffer'])
     def local_buffer_receive_dispatch(self, bus_payload: BusPayload):
-        self.memory_receive_handler(bus_payload)
+        payload = bus_payload.payload # 可以对这个进行一下check
+        transfer_info: TransferInfo = self._fsm_reg_output.read().transfer_info
+
+        if transfer_info.op == 'send':
+            next(self.cur_send_coroutine)
+        elif transfer_info.op == 'recv':
+            next(self.cur_recv_coroutine) # 貌似不会出现
+        else:
+            next(self.cur_memory_coroutine)
+
         self.transfer_buffer.allow_receive()  # 暂时在这里接收
 
     @registry(['noc_interface'])
     def noc_receive_dispatch(self, bus_payload: BusPayload):
         payload = bus_payload.payload
-        if isinstance(payload, SyncMessage):
-            if payload.op == 'sync':
-                self.sync_receive_handler(bus_payload)
-            elif payload.op == 'wait_core':  # 其他节点等待本节点
-                self.wait_core_receive_handler(bus_payload)
-            elif payload.op == 'inc_state':  # 本节点等待完成
-                self.inc_state_receive_handler(bus_payload)
+        transfer_info: TransferInfo = self._fsm_reg_output.read().transfer_info
+
+        # 全部整合了
+        if isinstance(payload, InterCoreMessage):
+            inter_core_message: InterCoreMessage = bus_payload.payload
+            sender_core_id, receiver_core_id = inter_core_message.sender_id, inter_core_message.receiver_id
+            # send recv的情况
+            if payload.is_sender:
+                # 对面是send
+                if transfer_info.op == 'recv' and sender_core_id == transfer_info.imm:
+                    if inter_core_message.status == 'sender_ready':
+                        receiver_ready_request = BusPayload(
+                            src=self.core_id, dst=sender_core_id, data_size=1,
+                            payload=InterCoreMessage(
+                                sender_id=sender_core_id, receiver_id=self.core_id,
+                                is_sender=False, status='receiver_ready'
+                            )
+                        )
+                        self.noc_interface.send(receiver_ready_request, None)
+                    elif inter_core_message.status == 'send_data':
+                        next(self.cur_recv_coroutine)
+                else:
+                    assert inter_core_message.status != 'send_data'
+                    self.recv_waiting_sender_dict.setdefault(sender_core_id)
+            else:
+                # 对面是receiver
+                assert sender_core_id == self.core_id
+                assert receiver_core_id == transfer_info.imm
+
+                # 当前一定在执行 send 指令
+                if receiver_core_id == transfer_info.imm and inter_core_message.status == 'receiver_ready':
+                    next(self.cur_send_coroutine)
+                else:
+                    assert False
         else:
-            self.memory_receive_handler(bus_payload)
-            self.noc_interface.allow_receive()  # 暂时在这里接受
+            # memory 相关操作的指令
+            next(self.cur_memory_coroutine)
+
+        self.noc_interface.allow_receive() # 传输结束，开始下一次 （可修改为等一段时间在开始下一次
 
     # 发射指令
     @registry(['func_trigger'])
@@ -181,113 +219,6 @@ class TransferUnit(BaseCoreCompo):
         else:
             self.slave_core_start_sync()
 
-    def master_core_check_finsh(self):
-        for k, v in self.sync_dict.items():
-            if not v:
-                return False
-        return True
-
-    def master_core_finish_sync(self):
-        for core in self.sync_dict:
-            finish_sync_request = BusPayload(
-                src=self.core_id, dst=core, data_size=1,
-                payload=SyncMessage(
-                    op='sync', message='finish'
-                )
-            )
-            self.noc_interface.send(finish_sync_request, None)
-
-    def slave_core_start_sync(self):
-        transfer_info: TransferInfo = self._fsm_reg_output.read().transfer_info
-        master_core = transfer_info.sync_info.start_core
-        start_sync_request = BusPayload(
-            src=self.core_id, dst=master_core, data_size=1,
-            payload=SyncMessage(
-                op='sync', message='start'
-            )
-        )
-        self.noc_interface.send(start_sync_request, None)
-
-    # 处理所有与sync有关的信息,不论目前是什么状态
-    def sync_receive_handler(self, bus_payload: BusPayload):
-        if self._run_state == 'sync':
-            sync_message: SyncMessage = bus_payload.payload
-            if sync_message.message == 'start':
-                if self.is_sync_master_core:
-                    src = bus_payload.src
-                    self.sync_dict[src] = True
-
-                    if self.master_core_check_finsh():  # finish
-                        self.master_core_finish_sync()
-                        self.sync_dict = {}
-                        self.finish_execute()
-                        self.is_sync_master_core = False
-
-            elif sync_message.message == 'finish':
-                self.finish_execute()
-            elif sync_message.message == 'query':
-                self.slave_core_start_sync()
-        self.noc_interface.allow_receive()
-
-    def execute_wait_core(self, transfer_info: TransferInfo):
-
-        start_wait_core_request = BusPayload(
-            src=self.core_id, dst=transfer_info.sync_info['core_id'], data_size=1,
-            payload=SyncMessage(
-                op='wait_core', message='start', state=transfer_info.sync_info['state']
-            )
-        )
-
-        self.noc_interface.send(start_wait_core_request, None)
-
-    # 处理所有与wait_core有关的信息,不论目前是什么状态
-    def wait_core_receive_handler(self, bus_payload: BusPayload):
-        sync_message: SyncMessage = bus_payload.payload
-        assert sync_message.message == 'start'
-        if sync_message.message == 'start':
-            # 其他核开始等待本核
-            state = sync_message.state  # 等待本核的state
-            if self.state_value >= state:
-                finish_wait_core_request = BusPayload(
-                    src=self.core_id, dst=bus_payload.src, data_size=1,
-                    payload=SyncMessage(
-                        op='inc_state', message='finish', state=self.state_value
-                    )
-                )
-                self.noc_interface.send(finish_wait_core_request, None)
-            else:
-                self.wait_core_dict[bus_payload.src] = state
-
-        self.noc_interface.allow_receive()
-
-    def execute_inc_state(self, transfer_info):
-        self.state_value += 1
-
-        finish_list = []
-        for k, v in self.wait_core_dict.items():
-            if v <= self.state_value:
-                finish_list.append(k)
-
-        for k in finish_list:
-            finish_wait_core_request = BusPayload(
-                src=self.core_id, dst=k, data_size=1,
-                payload=SyncMessage(
-                    op='inc_state', message='finish', state=self.state_value
-                )
-            )
-
-            self.noc_interface.send(finish_wait_core_request, None)
-            del self.wait_core_dict[k]
-
-        self.make_event(self.finish_execute, self.current_time + 1)
-
-    def inc_state_receive_handler(self, bus_payload: BusPayload):
-        sync_message: SyncMessage = bus_payload.payload
-        assert sync_message.message == 'finish'
-        if sync_message.message == 'finish':
-            assert self._run_state == 'wait_core'
-            self.finish_execute()
-        self.noc_interface.allow_receive()
 
     def execute_memory(self, transfer_info: TransferInfo):
 
@@ -424,23 +355,8 @@ class TransferUnit(BaseCoreCompo):
 
         self.noc_interface.send(send_data_request, self.finish_execute)
 
-    def noc_send_handler(self, transfer_info: TransferInfo, bus_payload: BusPayload):
-        inter_core_message: InterCoreMessage = bus_payload.payload
-
-        sender_core_id, receiver_core_id = inter_core_message.sender_id, inter_core_message.receiver_id
-        assert sender_core_id == self.core_id
-        assert receiver_core_id == transfer_info.imm
-
-        # 检查receiver是正确的，并已经就绪，切换回 process send进程
-        if receiver_core_id == transfer_info.imm and \
-                inter_core_message.status == 'receiver_ready':
-
-            next(self.cur_send_coroutine)
-        else:
-            assert False
-
     def process_receive(self, transfer_info: TransferInfo):
-        #TODO 有bug 关于 allow receive的
+        # TODO 有bug 关于 allow receive的
 
         op = transfer_info.op
         assert op == 'recv'
@@ -474,27 +390,61 @@ class TransferUnit(BaseCoreCompo):
 
         self.transfer_buffer.send(local_memory_write_request, self.finish_execute())
 
-    def noc_receive_handler(self,transfer_info:TransferInfo,bus_payload:BusPayload):
-        inter_core_message:InterCoreMessage = bus_payload.payload
+    def process_memory(self,transfer_info: TransferInfo):
+        op = transfer_info.op
 
-        sender_core_id, receiver_core_id = inter_core_message.sender_id, inter_core_message.receiver_id
-        assert sender_core_id == transfer_info.imm
-        assert receiver_core_id == self.core_id
+        dram_read_request = BusPayload(
+                src=self.core_id, dst='dram', data_size=1,
+                payload=MemoryRequest(
+                    access_type='read', addr=transfer_info.src1_addr,
+                    data_size=transfer_info.len
+                )
+        )
 
-        if sender_core_id == transfer_info.imm:
-            # 正好在等待这个核
-            if inter_core_message.status == 'sender_ready':
-                # sender后执行,发送receiver就绪
-                receiver_ready_request =
-            elif inter_core_message.status == 'send_data':
-                # 双方都就绪,对面发送数据
+        dram_write_request = BusPayload(
+            src=self.core_id, dst='dram', data_size=transfer_info.len,
+            payload=MemoryRequest(
+                access_type='write', addr=transfer_info.dst_addr,
+                data_size=transfer_info.len
+            )
+        )
 
-        else:
-            self.recv_waiting_sender_dict.setdefault(sender_core_id)
+        local_read_request = BusPayload(
+                src='transfer', dst='buffer', data_size=1,
+                payload=MemoryRequest(
+                    access_type='read', addr=transfer_info.src1_addr,
+                    data_size=transfer_info.len
+                )
+        )
 
+        local_write_request = BusPayload(
+                src='transfer', dst='buffer', data_size=transfer_info.len,
+                payload=MemoryRequest(
+                    access_type='write', addr=transfer_info.dst_addr,
+                    data_size=transfer_info.len
+                )
+            )
 
-    def process_memory(self):
-        pass
+        if op == 'dram_to_local':
+            self.noc_interface.send(dram_read_request,None)
+            yield 'dram read req send'
+            self.transfer_buffer.send(local_write_request,self.finish_execute)
+        elif op == 'local_to_dram':
+            self.transfer_buffer.send(local_write_request,None)
+            yield 'local buffer read req send'
+            self.noc_interface.send(dram_write_request,self.finish_execute)
+        elif op == 'dram_clr':
+            self.noc_interface.send(dram_write_request,self.finish_execute)
+        elif op == 'local_clr':
+            self.transfer_buffer.send(local_write_request,self.finish_execute)
+        elif op == 'dram_cpy':
+            self.noc_interface.send(dram_read_request,None)
+            yield 'dram cpy read req send'
+            self.noc_interface.send(dram_write_request,self.finish_execute)
+        elif op == 'local_cpy':
+            self.transfer_buffer.send(local_read_request,None)
+            yield 'local cpy read req send'
+            self.transfer_buffer.send(local_write_request,self.finish_execute)
 
     def get_running_status(self):
         core_id = 0
